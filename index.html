@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F7F7F4">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>Sestante 2 — rilievo pendenze</title>
+<style>
+/* Strumento da campo. Schermata di lavoro senza scorrimento, numeri grossi,
+   barra d'azione incollata in basso. Nessuna risorsa in rete: va offline. */
+:root{
+  --bg:#F7F7F4; --panel:#FFFFFF; --ink:#15181B; --ink-2:#5A6168;
+  --line:#D7D7D0; --act:#D4480B; --act-ink:#FFFFFF;
+  --good:#1B6B46; --warn:#9A6A08; --bad:#A32015; --data:#24404F;
+  --f-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:ui-monospace,"DejaVu Sans Mono","Roboto Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#101216; --panel:#1A1D21; --ink:#EDEEEF; --ink-2:#99A1A8;
+  --line:#2D3238; --act:#F2601C; --act-ink:#15181B;
+  --good:#4FBF8B; --warn:#E0A92B; --bad:#F2695C; --data:#8FC4DC;
+  color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#101216; --panel:#1A1D21; --ink:#EDEEEF; --ink-2:#99A1A8;
+  --line:#2D3238; --act:#F2601C; --act-ink:#15181B;
+  --good:#4FBF8B; --warn:#E0A92B; --bad:#F2695C; --data:#8FC4DC;
+  color-scheme:dark; }
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{height:100%}
+body{margin:0; min-height:100%; background:var(--bg); color:var(--ink);
+  font-family:var(--f-ui); font-size:15px; line-height:1.35; -webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top,0px) 14px calc(112px + env(safe-area-inset-bottom,0px));
+  max-width:780px; margin-inline:auto}
+nav{position:sticky; top:env(safe-area-inset-top,0px); z-index:30; background:var(--bg);
+  display:flex; gap:6px; padding:8px 0; border-bottom:1px solid var(--line); margin-bottom:12px}
+nav button{flex:1; font-size:13px; font-weight:600; padding:11px 4px; border:1px solid var(--line);
+  border-radius:8px; background:var(--panel); color:var(--ink-2); letter-spacing:.04em}
+nav button[aria-selected="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:12px; margin-bottom:12px}
+.lbl{font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-2); font-weight:700}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+.grow{flex:1 1 110px}
+button{font-family:inherit; font-size:15px; border-radius:9px; border:1px solid var(--line);
+  background:var(--panel); color:var(--ink); padding:11px 13px; cursor:pointer}
+button:focus-visible{outline:2px solid var(--act); outline-offset:2px}
+button.sm{font-size:13px; padding:9px 11px}
+button.on{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+button.danger{background:var(--bad); color:#fff; border-color:var(--bad)}
+input[type=number],input[type=text],select{font-family:var(--f-num); font-size:16px; padding:10px;
+  border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--ink); width:100%; min-width:0}
+select{font-family:var(--f-ui)}
+label.fld{display:block; flex:1 1 110px; min-width:0}
+label.fld .lbl{display:block; margin-bottom:4px}
+.chips{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px}
+.chip{font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--line);
+  background:var(--panel); color:var(--ink-2); display:inline-flex; gap:5px; align-items:center}
+.chip b{font-family:var(--f-num); color:var(--ink); font-weight:700}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-2);flex:none}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+
+.hero{background:var(--panel); border:1.5px solid var(--act); border-radius:13px; padding:14px; margin-bottom:10px}
+.hero .big{font-family:var(--f-num); font-variant-numeric:tabular-nums; font-weight:800;
+  font-size:clamp(50px,17vw,88px); line-height:.94; letter-spacing:-.035em}
+.hero .u{font-size:.45em; font-weight:700; color:var(--ink-2); letter-spacing:0}
+.hero .alt{font-family:var(--f-num); font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:5px;
+  overflow-wrap:anywhere}
+.tapme{font-size:10px; color:var(--ink-2); letter-spacing:.09em; text-transform:uppercase; margin-top:6px}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+.cell{background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:11px; min-width:0}
+.cell .v{font-family:var(--f-num); font-variant-numeric:tabular-nums; font-size:clamp(22px,7vw,32px); font-weight:700; line-height:1.03}
+.cell .s{font-family:var(--f-num); font-size:12px; color:var(--ink-2); font-weight:600}
+
+#bubWrap{display:flex; gap:12px; align-items:center}
+#bub{flex:0 0 132px; width:132px; height:132px}
+#bubTxt{min-width:0; font-size:12.5px; color:var(--ink-2)}
+
+#grpTop{display:flex; align-items:center; gap:10px}
+#grpName{font-weight:700; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.glist{display:flex; flex-direction:column; gap:8px; margin-top:9px}
+.gi{border:1px solid var(--line); border-radius:9px; padding:9px 10px}
+.gi.cur{border-color:var(--act); border-width:1.5px}
+.gi .gn{font-weight:700; overflow-wrap:anywhere}
+.gi .gs{font-family:var(--f-num); font-size:12px; color:var(--ink-2); margin-top:2px}
+
+#bar{position:fixed; left:0; right:0; bottom:0; z-index:40; background:var(--bg); border-top:1px solid var(--line);
+  padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:7px}
+#bar .inner{max-width:780px; margin-inline:auto; width:100%; display:flex; flex-direction:column; gap:7px}
+#bMark{width:100%; font-size:23px; font-weight:800; padding:22px 16px; letter-spacing:.03em;
+  background:var(--act); color:var(--act-ink); border-color:var(--act); border-radius:12px; position:relative; overflow:hidden}
+#bMark .fill{position:absolute; left:0; top:0; bottom:0; width:0%; background:rgba(255,255,255,.3); pointer-events:none}
+#bMark span.t{position:relative}
+#barMsg{font-size:12.5px; color:var(--ink-2); text-align:center; min-height:1.2em; font-family:var(--f-num)}
+#barMsg b{color:var(--ink)}
+.mode{display:flex; gap:7px}
+.mode button{flex:1; font-size:13.5px; font-weight:700; padding:12px 6px}
+
+.tw{overflow-x:auto; -webkit-overflow-scrolling:touch; max-height:52vh; overflow-y:auto}
+table{border-collapse:collapse; font-family:var(--f-num); font-variant-numeric:tabular-nums; font-size:12px; white-space:nowrap}
+th{background:var(--bg); color:var(--ink-2); font-weight:700; text-align:right; padding:6px 8px;
+  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2}
+td{text-align:right; padding:5px 8px; border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td.note{text-align:left; white-space:normal; min-width:88px; font-family:var(--f-ui)}
+tr.unst td{color:var(--warn)}
+.sum{display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:10px}
+.sum .v{font-family:var(--f-num); font-variant-numeric:tabular-nums; font-size:21px; font-weight:700}
+canvas{width:100%; height:auto; max-width:100%; display:block; border:1px solid var(--line); border-radius:9px; background:var(--panel)}
+.charts{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:560px){.charts{grid-template-columns:1fr}}
+.banner{border-radius:9px; padding:10px 12px; font-size:13px; margin-bottom:11px; border-left:4px solid var(--line); background:var(--panel)}
+.banner.bad{border-color:var(--bad)} .banner.ok{border-color:var(--good)} .banner.warn{border-color:var(--warn)}
+textarea{width:100%; min-height:130px; font-family:var(--f-num); font-size:11px;
+  border:1px solid var(--line); border-radius:8px; padding:9px; background:var(--bg); color:var(--ink)}
+.tip{font-size:12.5px; color:var(--ink-2); border-left:3px solid var(--line); padding-left:10px; margin:10px 0 0}
+.raw{font-family:var(--f-num); font-size:11px; color:var(--ink-2); word-break:break-all}
+
+/* finestra a tutto schermo per la calibrazione */
+#cal{position:fixed; inset:0; z-index:90; background:var(--bg); overflow-y:auto;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}
+#cal .in{max-width:520px; margin-inline:auto}
+#calPose{display:flex; justify-content:center; margin:12px 0}
+#calPose svg{width:min(62vw,230px); height:auto}
+.step{font-family:var(--f-num); font-size:12px; color:var(--ink-2); letter-spacing:.1em}
+#calName{font-size:21px; font-weight:800; margin:2px 0 4px}
+#calHow{color:var(--ink-2); font-size:13.5px}
+.ticks{display:flex; gap:6px; justify-content:center; margin:12px 0 4px; flex-wrap:wrap}
+.tick{width:26px; height:6px; border-radius:3px; background:var(--line)}
+.tick.done{background:var(--good)}
+.tick.now{background:var(--act)}
+
+#gate{position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:15px; padding:28px; text-align:center}
+#gate h2{font-size:24px; margin:0; letter-spacing:.06em}
+#gate p{color:var(--ink-2); font-size:14px; max-width:36ch; margin:0}
+#gate button{background:var(--act); color:var(--act-ink); border-color:var(--act);
+  font-size:21px; font-weight:800; padding:24px 34px; border-radius:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h2>SESTANTE 2</h2>
+  <p>Rilievo pendenze — Terzanello di Sopra, Comune di Pianoro.<br>Tocca per accendere sensori, GPS e suono.</p>
+  <button id="bGo">ACCENDI</button>
+  <p style="font-size:12px">Il suono conferma ogni punto con un bip: non devi guardare lo schermo.</p>
+</div>
+
+<!-- ================= CALIBRAZIONE A 6 POSIZIONI ================= -->
+<div id="cal" hidden><div class="in">
+  <div class="step" id="calStep">POSIZIONE 1 DI 6</div>
+  <div id="calName">—</div>
+  <div id="calHow">—</div>
+  <div id="calPose"></div>
+  <div class="ticks" id="calTicks"></div>
+  <div class="banner" id="calMsg" style="margin-top:12px">—</div>
+  <div class="row">
+    <button class="grow on" id="bCalTake">PRENDI</button>
+    <button class="grow" id="bCalSkip">Salta questa</button>
+    <button class="grow" id="bCalQuit">Esci</button>
+  </div>
+  <p class="tip"><b>Perché sei posizioni.</b> Ogni asse dell'accelerometro deve vedere la gravità una volta in un verso e una volta nell'altro. Da quelle sei letture si ricavano zero e fattore di scala dei tre assi: è il difetto del chip, non dipende da come appoggi il telefono, e si fa <b>una volta sola nella vita</b>.<br><br>
+  Le facce di taglio ballano: usa lo spigolo di un tavolo o una scatola. Non serve essere precisi al grado — il metodo prende il massimo e il minimo di ogni asse.</p>
+</div></div>
+
+<nav role="tablist">
+  <button role="tab" data-tab="t1" aria-selected="true">STRUMENTO</button>
+  <button role="tab" data-tab="t2" aria-selected="false">DATI</button>
+  <button role="tab" data-tab="t3" aria-selected="false">ESPORTA</button>
+</nav>
+
+<div id="banner"></div>
+
+<!-- ================= STRUMENTO ================= -->
+<section id="t1">
+  <div class="chips">
+    <span class="chip"><span class="dot" id="dSens"></span><b id="vSens">—</b></span>
+    <span class="chip"><span class="dot" id="dGps"></span>GPS <b id="vGps">—</b></span>
+    <span class="chip">traccia <b id="vTrk">0 m</b></span>
+    <span class="chip">punti <b id="vN">0</b></span>
+    <span class="chip"><span class="dot" id="dLock"></span>schermo <b id="vLock">—</b></span>
+  </div>
+
+  <div class="panel" style="padding:10px 11px">
+    <div id="grpTop">
+      <div style="min-width:0; flex:1">
+        <div class="lbl">Gruppo in corso</div>
+        <div id="grpName">—</div>
+      </div>
+      <button class="sm" id="bNewGrp">NUOVO GRUPPO</button>
+    </div>
+    <div id="grpForm" hidden style="margin-top:9px">
+      <input type="text" id="fGrp" placeholder="es. anello parcheggio" maxlength="60" autocomplete="off">
+      <div class="row" style="margin-top:7px">
+        <button class="sm grow on" id="bGrpOk">Conferma</button>
+        <button class="sm grow" id="bGrpNo">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="lbl">Pendenza lungo il sentiero</div>
+    <div class="big" id="rBig">—</div>
+    <div class="alt" id="rAlt">—</div>
+    <div class="tapme">tocca il numero per cambiare unità</div>
+  </div>
+
+  <div class="pair">
+    <div class="cell"><div class="lbl">Trasversale</div><div class="v" id="rTra">—</div><div class="s" id="rTraS">—</div></div>
+    <div class="cell"><div class="lbl">Massima del piano</div><div class="v" id="rMax">—</div><div class="s" id="rMaxS">—</div></div>
+  </div>
+
+  <div class="panel" style="margin-top:10px">
+    <div class="lbl" style="margin-bottom:9px">Bolla</div>
+    <div id="bubWrap">
+      <div id="bub"></div>
+      <div id="bubTxt">—</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:6px">Assetto e zero di appoggio</div>
+    <div id="poseLine" style="font-family:var(--f-num); font-size:13px; margin-bottom:9px">—</div>
+    <div class="row">
+      <button class="sm grow" id="bZero">ZERO DI APPOGGIO</button>
+      <button class="sm grow" id="bFreeze">Blocca assetto</button>
+    </div>
+    <div id="zBox" hidden style="margin-top:10px">
+      <div class="banner warn" id="zMsg" style="margin:0 0 9px"></div>
+      <div class="row">
+        <button class="sm grow on" id="bZTake">PRENDI LETTURA</button>
+        <button class="sm grow" id="bZStop">Annulla</button>
+      </div>
+    </div>
+    <div id="zRes" hidden style="margin-top:10px"></div>
+    <p class="tip"><b>Lo zero di appoggio si prende una volta all'inizio del giro</b>, non a ogni punto. Lettura, rotazione di 180° nello stesso posto, seconda lettura. Corregge insieme l'errore del sensore e la sporgenza della fotocamera: tutto ciò che fa stare storto il telefono <b>in quella posa</b>.<br><br>
+    Ogni assetto tiene il suo zero. Alzi il telefono per spostarti e lo riappoggi come prima: l'app riconosce la posa e <b>rimette da sola lo zero giusto</b>, senza chiederti niente.</p>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <label class="fld" style="flex:0 0 92px"><span class="lbl">Passo m</span>
+        <input type="number" id="fStep" value="5" min="0.2" step="0.1" inputmode="decimal"></label>
+      <label class="fld" style="flex:2 1 150px"><span class="lbl">Nota del prossimo punto</span>
+        <input type="text" id="fNote" placeholder="facoltativa" autocomplete="off"></label>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <button class="sm" data-tag="inizio">inizio</button>
+      <button class="sm" data-tag="fine">fine</button>
+      <button class="sm" data-tag="punto peggiore">peggiore</button>
+      <button class="sm" data-tag="cambio pendenza">cambio</button>
+      <button class="sm" data-tag="curva">curva</button>
+      <button class="sm" data-tag="erosione">erosione</button>
+      <button class="sm" data-tag="sabbia molle">sabbia molle</button>
+      <button class="sm" data-tag="foto">foto</button>
+    </div>
+    <p class="tip"><b>Il passo è quello vero, non cinque.</b> Misura dieci passi col telemetro e dividi per dieci: cinque passi da 72 cm fanno 3,60 m, non 5. Qui ci va la distanza che percorri davvero fra un punto e l'altro.</p>
+  </div>
+
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:6px">Calibrazione del sensore</div>
+    <div id="calState" style="font-family:var(--f-num); font-size:13px; margin-bottom:9px">—</div>
+    <div class="row">
+      <button class="sm grow" id="bCalGo">CALIBRA A 6 POSIZIONI</button>
+      <button class="sm grow" id="bCalZero">Azzera calibrazione</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:8px">Regolazioni</div>
+    <div class="row">
+      <button class="sm grow" id="bInvL">Inverti longitudinale</button>
+      <button class="sm grow" id="bInvT">Inverti trasversale</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sm grow" id="bSound">Suono: acceso</button>
+      <button class="sm grow" id="bTheme">Chiaro / scuro</button>
+    </div>
+    <p class="tip"><b>La regola unica sul campo: la cima del telefono sempre nel senso di marcia.</b> In discesa legge negativo, in risalita positivo, e su un anello i conti si chiudono da soli.</p>
+  </div>
+
+  <details class="panel"><summary class="lbl">Diagnostica</summary>
+    <p class="raw" id="diag" style="margin:8px 0 0">—</p></details>
+</section>
+
+<!-- ================= DATI ================= -->
+<section id="t2" hidden>
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:10px">Gruppo in corso — <span id="sGrp" style="color:var(--ink)">—</span></div>
+    <div class="sum">
+      <div><div class="lbl">Sviluppo</div><div class="v" id="sDev">0 m</div></div>
+      <div><div class="lbl">In pianta</div><div class="v" id="sPlan">0 m</div></div>
+      <div><div class="lbl">Dislivello netto</div><div class="v" id="sNet">0,00 m</div></div>
+      <div><div class="lbl">Salita / discesa</div><div class="v" id="sUpDn">0 / 0</div></div>
+      <div><div class="lbl">Pendenza media</div><div class="v" id="sAvg">—</div></div>
+      <div><div class="lbl">Punto peggiore</div><div class="v" id="sMax">—</div></div>
+    </div>
+    <div id="loopBox"></div>
+  </div>
+  <div class="panel">
+    <div class="charts">
+      <div><div class="lbl" style="margin-bottom:5px">Profilo — gruppo in corso</div><canvas id="cProf"></canvas></div>
+      <div><div class="lbl" style="margin-bottom:5px">Traccia in pianta — gruppo in corso</div><canvas id="cPlan"></canvas></div>
+    </div>
+  </div>
+  <div class="panel"><div class="lbl">Gruppi in memoria</div><div class="glist" id="grpList"></div></div>
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:8px">Punti del gruppo in corso</div>
+    <div class="tw"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    <div class="row" style="margin-top:11px"><button class="sm grow" id="bUndo">Annulla ultimo punto</button></div>
+  </div>
+</section>
+
+<!-- ================= ESPORTA ================= -->
+<section id="t3" hidden>
+  <div class="panel">
+    <label class="fld"><span class="lbl">Cosa esportare</span><select id="fExp"></select></label>
+    <p class="tip">Ogni riga porta scritto il <b>gruppo</b>, l'<b>assetto</b> e se era calibrato. Esportando tutto non si mescola niente: si filtra dopo.</p>
+  </div>
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:9px">Per la chat</div>
+    <div class="row">
+      <button class="sm grow" id="bCopy">COPIA TUTTO</button>
+      <button class="sm grow" id="bShTxt">CONDIVIDI</button>
+      <button class="sm grow" id="bShow">Mostra come testo</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:9px">Per le mappe</div>
+    <div class="row">
+      <button class="sm grow" id="bGpx">GPX</button>
+      <button class="sm grow" id="bKml">KML</button>
+      <button class="sm grow" id="bCsv">CSV</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sm grow" id="bShGpx">CONDIVIDI GPX</button>
+      <button class="sm grow" id="bShKml">CONDIVIDI KML</button>
+    </div>
+    <p class="tip"><b>GPX</b> → Locus Map, komoot, Garmin. <b>KML</b> → Google Earth Pro, dove stanno già Campo 1 e Campo 2: ogni gruppo diventa una cartella. <b>CSV</b> → Excel.<br>
+    I nomi file contengono gruppo, data e ora: <b>non si sovrascrivono mai</b>.</p>
+  </div>
+  <div class="panel">
+    <div class="lbl" style="margin-bottom:9px">Pulizia</div>
+    <div class="row">
+      <button class="sm grow" id="bDelGrp">Cancella il gruppo in corso</button>
+      <button class="sm grow" id="bReset">Azzera tutto</button>
+    </div>
+    <p class="tip"><b>Dove stanno i dati.</b> In un cassetto dentro il browser, legato a questa pagina. Resistono a chiusura scheda, chiusura browser, riavvio. <b>Si perdono</b> se cancelli i dati di navigazione o apri in anonima. Il cassetto è una rete di sicurezza, <b>non l'archivio</b>.</p>
+  </div>
+  <div id="outBox" hidden class="panel">
+    <textarea id="out" readonly></textarea>
+    <p class="tip">Se COPIA non funziona: tieni premuto qui sopra, "Seleziona tutto", copia.</p>
+  </div>
+</section>
+
+<div id="bar"><div class="inner">
+  <div class="mode">
+    <button id="mAuto">AUTO · appoggia e aspetta</button>
+    <button id="mMan" class="on">MANUALE</button>
+  </div>
+  <button id="bMark"><span class="fill" id="mkFill"></span><span class="t" id="mkTxt">SEGNA PUNTO</span></button>
+  <div id="barMsg">pronto</div>
+</div></div>
+
+<script>
+"use strict";
+/* ===================== stato ===================== */
+var KEY="sestante2-terzanello", OLD="sestante-terzanello-v1";
+var pts=[], trk=[], curGrp="";
+var invL=1, invT=1, sound=true, auto=false, unit=0;
+var CAL={off:[0,0,0], sc:[1,1,1], when:null};   /* calibrazione del sensore */
+var ZEROS={};                                   /* zero di appoggio per assetto */
+var FREEZE=null;                                /* assetto bloccato */
+var buf=[], last=null, gps=null, heading=null;
+var sensorMode="—", sensorSeen=false, marking=false;
+var autoState="wait", autoT0=0, lockT0=0;
+var AC=null, armDel=null, armReset=null, sinceExp=0;
+var calIdx=0, calAcc=[], calOn=false;
+var zStep=0, z1=null;
+
+function $(i){ return document.getElementById(i); }
+function fmt(n,d){ if(n===null||n===undefined||isNaN(n)||!isFinite(n)) return "—";
+  return n.toFixed(d===undefined?1:d).replace(".",","); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function slug(s){ return String(s||"senza-nome").toLowerCase()
+  .replace(/[àáâä]/g,"a").replace(/[èéêë]/g,"e").replace(/[ìíîï]/g,"i")
+  .replace(/[òóôö]/g,"o").replace(/[ùúûü]/g,"u")
+  .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40)||"senza-nome"; }
+function stamp(){ return new Date().toISOString().slice(0,16).replace(/[-:T]/g,""); }
+function defGrp(){ var d=new Date();
+  return "rilievo "+("0"+d.getDate()).slice(-2)+"-"+("0"+(d.getMonth()+1)).slice(-2)+" "+
+    ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm(a){ var m=Math.sqrt(dot(a,a))||1; return [a[0]/m,a[1]/m,a[2]/m]; }
+function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+
+/* ===================== unità ===================== */
+/* La percentuale e' salita/avanzamento: a 90 gradi l'avanzamento e' zero e
+   il numero esplode. Oltre i 60 gradi la nascondo invece di mostrare assurdita'. */
+var UNITS=["%","°","1:n","mm/m","‰","gon"];
+function conv(deg,u){
+  var t=Math.tan(deg*Math.PI/180);
+  if(u==="°") return fmt(deg,2)+"°";
+  if(u==="gon") return fmt(deg/0.9,2)+" gon";
+  if(Math.abs(deg)>=60) return "oltre scala";
+  if(u==="%") return fmt(t*100,1)+" %";
+  if(u==="‰") return fmt(t*1000,0)+" ‰";
+  if(u==="mm/m") return fmt(t*1000,0)+" mm/m";
+  if(u==="1:n"){ if(Math.abs(t)<1e-4) return "piano";
+    return (t<0?"-1:":"1:")+fmt(Math.abs(1/t),1); }
+  return "—";
+}
+function allUnits(deg){
+  var o=[],i;
+  for(i=0;i<UNITS.length;i++) if(UNITS[i]!==UNITS[unit]) o.push(conv(deg,UNITS[i]));
+  return o.join("  ·  ");
+}
+
+/* ===================== suono ===================== */
+function audioOn(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+  if(AC.state==="suspended") AC.resume(); }catch(e){ AC=null; } }
+function beep(f,ms,vol){
+  if(!sound||!AC) return;
+  try{ var o=AC.createOscillator(), g=AC.createGain();
+    o.type="sine"; o.frequency.value=f;
+    g.gain.setValueAtTime(0,AC.currentTime);
+    g.gain.linearRampToValueAtTime(vol===undefined?0.28:vol,AC.currentTime+0.012);
+    g.gain.linearRampToValueAtTime(0,AC.currentTime+ms/1000);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+ms/1000+0.03);
+  }catch(e){}
+}
+function buzz(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+function sigOk(){ beep(950,110); setTimeout(function(){beep(1250,130);},130); buzz([55,55,55]); }
+function sigWeak(){ beep(430,300,0.3); buzz([180]); }
+function sigArm(){ beep(1500,55,0.14); }
+function sigNo(){ beep(240,420,0.3); buzz([90,70,90]); }
+function sigAlarm(){ beep(300,220,0.32); setTimeout(function(){beep(300,220,0.32);},300);
+  setTimeout(function(){beep(300,420,0.32);},600); buzz([200,120,200,120,400]); }
+
+/* ===================== assetti ===================== */
+/* Ogni assetto definisce tre assi nel riferimento del telefono:
+   e1 trasversale, e2 longitudinale, e3 normale (quello che punta "in giu").
+   lon = atan2(g·e2, g·e3)   tra = atan2(g·e1, g·e3)
+   A riposo g coincide con e3 e tutti e due fanno zero. */
+var POSES=[
+ {k:"piatto",      n:"piatto, schermo in su",   ax:2,s: 1, e1:[1,0,0],  e2:[0,1,0],  e3:[0,0,1]},
+ {k:"capovolto",   n:"schermo in giù",          ax:2,s:-1, e1:[-1,0,0], e2:[0,1,0],  e3:[0,0,-1]},
+ {k:"in piedi",    n:"in piedi, piedi in giù",  ax:1,s: 1, e1:[1,0,0],  e2:[0,0,-1], e3:[0,1,0]},
+ {k:"a testa in giù",n:"a testa in giù",        ax:1,s:-1, e1:[1,0,0],  e2:[0,0,1],  e3:[0,-1,0]},
+ {k:"di taglio A", n:"di taglio, fianco A giù", ax:0,s: 1, e1:[0,0,-1], e2:[0,1,0],  e3:[1,0,0]},
+ {k:"di taglio B", n:"di taglio, fianco B giù", ax:0,s:-1, e1:[0,0,1],  e2:[0,1,0],  e3:[-1,0,0]}
+];
+function poseOf(g){
+  var bi=0, bv=Math.abs(g[0]), i;
+  for(i=1;i<3;i++) if(Math.abs(g[i])>bv){ bv=Math.abs(g[i]); bi=i; }
+  var s=g[bi]>=0?1:-1;
+  for(i=0;i<POSES.length;i++) if(POSES[i].ax===bi&&POSES[i].s===s) return POSES[i];
+  return POSES[0];
+}
+function frameFrom(g){
+  /* assetto libero: e3 = gravita' attuale, e2 = l'asse del telefono meno
+     allineato con essa, e1 = perpendicolare ai due. */
+  var e3=norm(g), cands=[[0,1,0],[0,0,1],[1,0,0]], c=cands[0], i;
+  for(i=0;i<cands.length;i++) if(Math.abs(dot(cands[i],e3))<0.8){ c=cands[i]; break; }
+  var e2=norm([c[0]-dot(c,e3)*e3[0], c[1]-dot(c,e3)*e3[1], c[2]-dot(c,e3)*e3[2]]);
+  var e1=norm(cross(e2,e3));
+  return {k:"bloccato", n:"assetto bloccato", e1:e1, e2:e2, e3:e3};
+}
+
+/* ===================== salvataggio ===================== */
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({pts:pts,trk:trk,grp:curGrp,
+  invL:invL,invT:invT,step:$("fStep").value,sound:sound,unit:unit,CAL:CAL,ZEROS:ZEROS})); }catch(e){} }
+function load(){
+  var raw=null, imported=false;
+  try{ raw=localStorage.getItem(KEY); if(!raw){ raw=localStorage.getItem(OLD); imported=!!raw; } }catch(e){}
+  if(!raw){ curGrp=defGrp(); return; }
+  try{
+    var o=JSON.parse(raw);
+    invL=o.invL||1; invT=o.invT||1;
+    if(typeof o.unit==="number") unit=o.unit;
+    if(o.sound===false) sound=false;
+    if(o.step) $("fStep").value=o.step;
+    if(o.CAL&&o.CAL.sc) CAL=o.CAL;
+    if(o.ZEROS) ZEROS=o.ZEROS;
+    trk=(o.trk&&o.trk.length)?o.trk:[];
+    pts=(o.pts&&o.pts.length)?o.pts:[];
+    var legacy="rilievo precedente", i;
+    for(i=0;i<pts.length;i++) if(!pts[i].grp) pts[i].grp=legacy;
+    for(i=0;i<trk.length;i++) if(!trk[i].grp) trk[i].grp=legacy;
+    curGrp=o.grp||(pts.length?pts[pts.length-1].grp:defGrp());
+    if(pts.length||imported)
+      banner("ok",(imported?"Importati dalla versione 1: ":"Ripristinati: ")+"<b>"+pts.length+
+        "</b> punti e <b>"+trk.length+"</b> posizioni di traccia. Gruppo in corso: <b>"+esc(curGrp)+"</b>."+
+        (imported?" La versione 1 resta intatta con i suoi dati.":""));
+  }catch(e){ curGrp=defGrp(); }
+}
+function banner(k,h){ $("banner").innerHTML=h?'<div class="banner '+k+'">'+h+"</div>":""; }
+function msg(h){ $("barMsg").innerHTML=h; }
+
+/* ===================== lettura ===================== */
+function onMotion(e){
+  var a=e.accelerationIncludingGravity; if(!a) return;
+  var r=[a.x||0,a.y||0,a.z||0];
+  if(Math.abs(r[0])+Math.abs(r[1])+Math.abs(r[2])<1) return;
+  push(r,"accelerometro");
+}
+function onOrient(e){
+  if(sensorMode==="accelerometro") return;
+  if(e.beta===null&&e.gamma===null) return;
+  /* ricostruisco un vettore gravita' dai due angoli: approssimazione di ripiego */
+  var b=(e.beta||0)*Math.PI/180, c=(e.gamma||0)*Math.PI/180;
+  push([Math.sin(c), Math.sin(b), Math.cos(b)*Math.cos(c)],"orientamento");
+}
+function onAbs(e){
+  if(typeof e.webkitCompassHeading==="number") heading=e.webkitCompassHeading;
+  else if(e.absolute&&typeof e.alpha==="number") heading=(360-e.alpha)%360;
+}
+function push(r,mode){
+  sensorSeen=true; sensorMode=mode;
+  var i, g=[0,0,0];
+  for(i=0;i<3;i++) g[i]=(r[i]-CAL.off[i])/(CAL.sc[i]||1);
+  g=norm(g);
+  if(calOn){ calTick(r); return; }
+  var F=FREEZE||poseOf(g);
+  var lon=Math.atan2(dot(g,F.e2),dot(g,F.e3))*180/Math.PI*invL;
+  var tra=Math.atan2(dot(g,F.e1),dot(g,F.e3))*180/Math.PI*invT;
+  var now=Date.now();
+  buf.push({l:lon,t:tra,ts:now});
+  while(buf.length&&buf[0].ts<now-900) buf.shift();
+  var sl=0,st=0;
+  for(i=0;i<buf.length;i++){ sl+=buf[i].l; st+=buf[i].t; }
+  var ml=sl/buf.length, mt=st/buf.length, vl=0;
+  for(i=0;i<buf.length;i++) vl+=(buf[i].l-ml)*(buf[i].l-ml)+(buf[i].t-mt)*(buf[i].t-mt);
+  var sd=buf.length>1?Math.sqrt(vl/(buf.length-1)):0;
+  var Z=ZEROS[F.k]||{l:0,t:0,when:null};
+  last={rawL:ml,rawT:mt,lon:ml-Z.l,tra:mt-Z.t,sd:sd,mode:mode,pose:F,zero:Z,g:g};
+  $("diag").innerHTML="modo "+mode+" · assetto "+esc(F.k)+" · campioni "+buf.length+
+    " · grezzi "+fmt(r[0],2)+" / "+fmt(r[1],2)+" / "+fmt(r[2],2)+
+    " · stabilita "+fmt(sd,2)+"&deg; · bussola "+(heading===null?"—":fmt(heading,0)+"&deg;")+
+    " · cal "+(CAL.when?"si":"no")+" · traccia "+trk.length+" fix";
+  live(); if(auto) tickAuto();
+}
+function plane(lon,tra){
+  var pl=Math.tan(lon*Math.PI/180)*100, pt=Math.tan(tra*Math.PI/180)*100;
+  var pm=Math.sqrt(pl*pl+pt*pt);
+  return {pl:pl,pt:pt,pm:pm,am:Math.atan(pm/100)*180/Math.PI,dir:Math.atan2(pt,pl)*180/Math.PI};
+}
+/* I due campi misurati su ortofoto 19/06/2025:
+   Campo 1 mediana 26% punte 33% · Campo 2 mediana 21% punte 27%. */
+function compare(p){
+  var a=Math.abs(p);
+  if(a<5) return "quasi in piano";
+  if(a<15) return "dolce — sotto i vostri campi";
+  if(a<23) return "come la mediana di Campo 2 (21%)";
+  if(a<30) return "come la mediana di Campo 1 (26%)";
+  if(a<36) return "come il punto peggiore che avete (33%)";
+  return "oltre tutto quello che avete misurato";
+}
+function live(){
+  if(!last) return;
+  var p=plane(last.lon,last.tra), u=UNITS[unit];
+  var big=conv(last.lon,u);
+  $("rBig").innerHTML=big.replace(/ (%|°|‰|gon|mm\/m)$/,' <span class="u">$1</span>');
+  $("rAlt").textContent=allUnits(last.lon)+"  ·  "+compare(p.pl);
+  $("rTra").textContent=conv(last.tra,u);
+  $("rTraS").textContent=fmt(last.tra,2)+"°";
+  $("rMax").textContent=conv(p.am,u);
+  $("rMaxS").textContent=fmt(p.am,2)+"° a "+fmt(Math.abs(p.dir),0)+"° dall'asse";
+  var s=last.sd<0.4?"ok":(last.sd<1.2?"warn":"bad");
+  $("dSens").className="dot "+s;
+  $("vSens").textContent=last.sd<0.4?"fermo":(last.sd<1.2?"ballerino":"in mano");
+  $("poseLine").innerHTML=(FREEZE?"<b>BLOCCATO</b> · ":"")+"assetto: <b>"+esc(last.pose.n)+"</b><br>"+
+    (last.zero.when?("zero "+fmt(last.zero.l,2)+" / "+fmt(last.zero.t,2)+"° · preso "+last.zero.when)
+                   :"<span style=\"color:var(--warn)\">nessuno zero per questo assetto</span>");
+  bubble(last.lon,last.tra);
+}
+function bubble(lon,tra){
+  var R=62, FS=8;                        /* fondo scala 8 gradi */
+  var x=Math.max(-1,Math.min(1,tra/FS)), y=Math.max(-1,Math.min(1,lon/FS));
+  var cx=R+x*(R-12), cy=R-y*(R-12);
+  var lv=Math.sqrt(lon*lon+tra*tra);
+  var col=lv<0.3?"var(--good)":(lv<1.5?"var(--warn)":"var(--act)");
+  $("bub").innerHTML='<svg viewBox="0 0 '+(2*R)+' '+(2*R)+'" width="100%" height="100%" aria-hidden="true">'+
+    '<circle cx="'+R+'" cy="'+R+'" r="'+(R-2)+'" fill="none" stroke="var(--line)" stroke-width="2"/>'+
+    '<circle cx="'+R+'" cy="'+R+'" r="'+((R-12)*2/FS)+'" fill="none" stroke="var(--line)" stroke-width="1"/>'+
+    '<circle cx="'+R+'" cy="'+R+'" r="'+((R-12)*5/FS)+'" fill="none" stroke="var(--line)" stroke-width="1"/>'+
+    '<line x1="'+R+'" y1="6" x2="'+R+'" y2="'+(2*R-6)+'" stroke="var(--line)"/>'+
+    '<line x1="6" y1="'+R+'" x2="'+(2*R-6)+'" y2="'+R+'" stroke="var(--line)"/>'+
+    '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="9" fill="'+col+'" opacity="0.85"/></svg>';
+  $("bubTxt").innerHTML="fuori bolla di <b>"+fmt(lv,2)+"°</b><br>"+
+    "<span style=\"font-size:11.5px\">anelli a 2° e 5°, bordo 8°. La bolla sale verso l'alto del telefono quando la cima è in salita.</span>";
+}
+
+/* ===================== modo automatico ===================== */
+var STILL=0.42, MOVE=2.2, HOLD=1600, RELOCK=600;
+function tickAuto(){
+  if(marking||!last) return;
+  var now=Date.now();
+  if(autoState==="lock"){
+    if(last.sd>MOVE){ if(!lockT0) lockT0=now;
+      if(now-lockT0>RELOCK){ autoState="wait"; lockT0=0; sigArm(); mkFill(0); msg("armato — appoggia il telefono"); } }
+    else lockT0=0;
+    return;
+  }
+  if(last.sd<STILL){
+    if(autoState!=="count"){ autoState="count"; autoT0=now; }
+    mkFill(Math.min(1,(now-autoT0)/HOLD)*100);
+    msg("fermo — segno in <b>"+fmt((HOLD-(now-autoT0))/1000,1)+" s</b>");
+    if(now-autoT0>=HOLD){ autoState="lock"; lockT0=0; mkFill(0); mark(true); }
+  } else if(autoState==="count"){ autoState="wait"; mkFill(0); msg("appoggia il telefono e tienilo fermo"); }
+}
+function mkFill(p){ $("mkFill").style.width=p+"%"; }
+function setMode(a){
+  auto=a; autoState="wait"; lockT0=0; mkFill(0);
+  $("mAuto").className=a?"on":""; $("mMan").className=a?"":"on";
+  $("mkTxt").textContent=a?"MODO AUTOMATICO":"SEGNA PUNTO";
+  msg(a?"appoggia il telefono e tienilo fermo":"pronto");
+}
+
+/* ===================== calibrazione a 6 posizioni ===================== */
+var CALSEQ=[
+ {k:"piatto",        t:"Schermo in SU",        h:"Telefono appoggiato sul tavolo, schermo verso di te.",       f:"front",rot:0,  ax:2,s:1},
+ {k:"capovolto",     t:"Schermo in GIÙ",       h:"Capovolto sul tavolo: vedi il retro e le fotocamere.",       f:"back", rot:0,  ax:2,s:-1},
+ {k:"in piedi",      t:"IN PIEDI",             h:"Dritto in verticale, piedi del telefono appoggiati.",         f:"front",rot:0,  ax:1,s:1},
+ {k:"a testa in giù",t:"A TESTA IN GIÙ",       h:"Verticale ma capovolto: la fotocamera frontale sta in basso.",f:"front",rot:180,ax:1,s:-1},
+ {k:"di taglio A",   t:"DI TAGLIO, un fianco", h:"Appoggiato sul fianco lungo, schermo verso di te.",           f:"front",rot:90, ax:0,s:1},
+ {k:"di taglio B",   t:"DI TAGLIO, l'altro",   h:"Sull'altro fianco lungo, schermo verso di te.",               f:"front",rot:270,ax:0,s:-1}
+];
+function phoneSvg(face,rot){
+  var body = face==="front"
+    ? '<rect x="-26" y="-54" width="52" height="108" rx="8" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.5"/>'+
+      '<rect x="-21" y="-47" width="42" height="94" rx="4" fill="var(--data)" opacity="0.18"/>'+
+      '<circle cx="0" cy="-42" r="3.2" fill="var(--ink)"/>'+
+      '<text x="0" y="-33" font-size="6" text-anchor="middle" fill="var(--ink-2)">frontale</text>'
+    : '<rect x="-26" y="-54" width="52" height="108" rx="8" fill="var(--ink)" stroke="var(--ink)" stroke-width="2.5"/>'+
+      '<rect x="-19" y="-47" width="17" height="30" rx="5" fill="var(--panel)" opacity="0.25"/>'+
+      '<circle cx="-10.5" cy="-41" r="3.6" fill="var(--panel)"/>'+
+      '<circle cx="-10.5" cy="-32" r="3.6" fill="var(--panel)"/>'+
+      '<circle cx="-10.5" cy="-23" r="2.6" fill="var(--panel)"/>'+
+      '<text x="6" y="-30" font-size="6" text-anchor="middle" fill="var(--panel)">retro</text>';
+  return '<svg viewBox="-60 -70 120 150" aria-hidden="true">'+
+    '<g transform="rotate('+rot+')">'+body+'</g>'+
+    '<line x1="-52" y1="64" x2="52" y2="64" stroke="var(--ink-2)" stroke-width="2.5"/>'+
+    '<path d="M0 44 L0 60 M-5 54 L0 60 L5 54" stroke="var(--act)" stroke-width="2.5" fill="none"/>'+
+    '<text x="0" y="76" font-size="7" text-anchor="middle" fill="var(--ink-2)">verso il basso</text></svg>';
+}
+function calShow(){
+  $("calState").innerHTML = CAL.when
+    ? "calibrato il "+CAL.when+"<br>zero "+fmt(CAL.off[0],3)+" / "+fmt(CAL.off[1],3)+" / "+fmt(CAL.off[2],3)+
+      " · scala "+fmt(CAL.sc[0],3)+" / "+fmt(CAL.sc[1],3)+" / "+fmt(CAL.sc[2],3)
+    : "non calibrato — l'app usa il sensore come esce di fabbrica";
+}
+function calStart(){
+  calIdx=0; calAcc=[]; calOn=true; $("cal").hidden=false; calDraw();
+}
+function calDraw(){
+  var p=CALSEQ[calIdx];
+  $("calStep").textContent="POSIZIONE "+(calIdx+1)+" DI 6";
+  $("calName").textContent=p.t;
+  $("calHow").textContent=p.h;
+  $("calPose").innerHTML=phoneSvg(p.f,p.rot);
+  var h="",i;
+  for(i=0;i<6;i++) h+='<span class="tick'+(calAcc[i]?" done":(i===calIdx?" now":""))+'"></span>';
+  $("calTicks").innerHTML=h;
+  $("calMsg").className="banner warn";
+  $("calMsg").textContent="Mettilo in questa posizione, tienilo fermo, premi PRENDI.";
+}
+function calTick(r){
+  calOn && (window.__lastRaw=r);
+}
+function calTake(){
+  var r=window.__lastRaw;
+  if(!r){ sigNo(); $("calMsg").className="banner bad"; $("calMsg").textContent="Nessuna lettura dal sensore."; return; }
+  var p=CALSEQ[calIdx];
+  var bi=0, bv=Math.abs(r[0]), i;
+  for(i=1;i<3;i++) if(Math.abs(r[i])>bv){ bv=Math.abs(r[i]); bi=i; }
+  var s=r[bi]>=0?1:-1;
+  if(bi!==p.ax||s!==p.s){
+    sigNo(); $("calMsg").className="banner bad";
+    $("calMsg").innerHTML="<b>Non è questa la posizione.</b> Il telefono adesso è <b>"+
+      esc(poseOf(norm(r)).n)+"</b>. Guarda il disegno e riprova — oppure salta.";
+    return;
+  }
+  calAcc[calIdx]=r.slice();
+  sigOk(); calIdx++;
+  if(calIdx<6){ calDraw(); return; }
+  calFinish();
+}
+function calFinish(){
+  var off=[0,0,0], sc=[1,1,1], ok=true, i, j;
+  for(i=0;i<3;i++){
+    var mx=null, mn=null;
+    for(j=0;j<6;j++) if(calAcc[j]){
+      var v=calAcc[j][i];
+      if(mx===null||v>mx) mx=v;
+      if(mn===null||v<mn) mn=v;
+    }
+    if(mx===null||mn===null||(mx-mn)<4){ ok=false; break; }
+    off[i]=(mx+mn)/2; sc[i]=(mx-mn)/2;
+  }
+  calOn=false; $("cal").hidden=true;
+  if(!ok){
+    sigNo();
+    banner("bad","<b>Calibrazione non riuscita.</b> Qualche asse non ha visto la gravità in tutti e due i versi: servono tutte e sei le posizioni, saltarne una lascia un asse scoperto.");
+    return;
+  }
+  CAL={off:off, sc:sc, when:new Date().toLocaleString("it-IT")};
+  ZEROS={};  /* la catena e' cambiata: gli zeri di appoggio vecchi non valgono piu' */
+  calShow(); save(); sigOk();
+  banner("ok","<b>Sensore calibrato.</b> Zero degli assi "+fmt(off[0],3)+" / "+fmt(off[1],3)+" / "+fmt(off[2],3)+
+    ", scala "+fmt(sc[0],3)+" / "+fmt(sc[1],3)+" / "+fmt(sc[2],3)+
+    ".<br><b>Gli zeri di appoggio sono stati azzerati</b>: erano misurati sulla catena vecchia. Rifai lo zero quando sei sul posto.");
+}
+
+/* ===================== zero di appoggio ===================== */
+function zStart(){
+  if(!last){ sigNo(); return; }
+  zStep=1; z1=null; $("zBox").hidden=false; $("zRes").hidden=true;
+  $("zMsg").innerHTML="<b>Lettura 1 di 2.</b> Appoggia il telefono come lo userai — non serve che il piano sia orizzontale. Fermo, poi premi.";
+  sigArm();
+}
+function zStop(){ zStep=0; z1=null; $("zBox").hidden=true; }
+function zTake(){
+  if(!last){ sigNo(); return; }
+  if(last.sd>1.2){ sigWeak(); $("zMsg").innerHTML="<b>Il telefono si muove</b> ("+fmt(last.sd,2)+"°). Appoggialo e riprova."; return; }
+  if(zStep===1){
+    z1={l:last.rawL,t:last.rawT,pose:last.pose.k};
+    zStep=2; sigOk();
+    $("zMsg").innerHTML="<b>Lettura 1:</b> "+fmt(z1.l,2)+"° / "+fmt(z1.t,2)+
+      "°.<br>Ora <b>ruota di 180°</b> — stesso punto, testa dove c'erano i piedi. Poi premi di nuovo.";
+    return;
+  }
+  if(last.pose.k!==z1.pose){
+    sigNo(); $("zMsg").innerHTML="<b>Assetto cambiato</b> fra le due letture ("+esc(z1.pose)+" → "+
+      esc(last.pose.k)+"). La rotazione dev'essere di 180° attorno alla verticale, non un ribaltamento. Ricomincia."; return;
+  }
+  var r2={l:last.rawL,t:last.rawT};
+  var bl=(z1.l+r2.l)/2, bt=(z1.t+r2.t)/2, sl=(z1.l-r2.l)/2, st=(z1.t-r2.t)/2;
+  var pk=last.pose.k, pn=last.pose.n;
+  zStep=0; $("zBox").hidden=true; sigOk();
+  $("zRes").hidden=false;
+  $("zRes").innerHTML='<div class="banner ok" style="margin:0"><b>Assetto:</b> '+esc(pn)+"<br>"+
+    "<b>Zero di appoggio:</b> long "+fmt(bl,2)+"°, trasv "+fmt(bt,2)+"°<br>"+
+    "<b>Pendenza vera di quel piano:</b> long "+fmt(sl,2)+"° = "+fmt(Math.tan(sl*Math.PI/180)*100,1)+
+    " %, trasv "+fmt(st,2)+"°<br><span style=\"color:var(--ink-2)\">Letture: "+fmt(z1.l,2)+"° e "+
+    fmt(r2.l,2)+"°</span></div>"+
+    '<div class="row" style="margin-top:9px"><button class="sm grow on" id="bZApply">Applica a questo assetto</button>'+
+    '<button class="sm grow" id="bZDrop">Lascia perdere</button></div>';
+  $("bZApply").addEventListener("click",function(){
+    ZEROS[pk]={l:bl,t:bt,when:new Date().toLocaleString("it-IT")};
+    $("zRes").hidden=true; save(); sigOk();
+    banner("ok","Zero applicato all'assetto <b>"+esc(pn)+"</b>. Gli altri assetti tengono il loro.");
+  });
+  $("bZDrop").addEventListener("click",function(){ $("zRes").hidden=true; });
+}
+
+/* ===================== GPS ===================== */
+var gpsWasOk=false;
+function startGps(){
+  if(!navigator.geolocation){ $("vGps").textContent="assente"; $("dGps").className="dot bad"; return; }
+  navigator.geolocation.watchPosition(function(pos){
+    gps=pos; gpsWasOk=true;
+    var c=pos.coords, acc=c.accuracy;
+    $("vGps").textContent="±"+Math.round(acc)+" m";
+    $("dGps").className="dot "+(acc<=10?"ok":(acc<=25?"warn":"bad"));
+    if(c.heading!==null&&!isNaN(c.heading)&&c.speed>0.7) heading=c.heading;
+    /* soglia legata alla precisione: fermo con GPS ballerino non deve generare traccia */
+    var soglia=Math.max(3,acc/2);
+    if(acc<=35){
+      var mine=grpTrk(curGrp), prev=mine.length?mine[mine.length-1]:null;
+      var d=prev?hav(prev,{lat:c.latitude,lon:c.longitude}):1e9;
+      if((!prev||d>=soglia||pos.timestamp-prev.t>20000)&&trk.length<8000){
+        trk.push({lat:c.latitude,lon:c.longitude,
+          ele:(c.altitude===null?null:Math.round(c.altitude*10)/10),
+          acc:Math.round(acc*10)/10,t:pos.timestamp,grp:curGrp});
+        $("vTrk").textContent=fmt(trkLen(curGrp),0)+" m";
+        if(trk.length%6===0) save();
+        if(!$("t2").hidden) render();
+      }
+    }
+  }, function(err){
+    gps=null;
+    $("vGps").textContent=err.code===1?"negato":"nessun fix";
+    $("dGps").className="dot bad";
+    if(gpsWasOk&&err.code===1){
+      gpsWasOk=false; sigAlarm();
+      banner("bad","<b>Il GPS è stato revocato a metà rilievo.</b> Succede col permesso “consenti questa volta” quando la pagina resta in secondo piano. Le pendenze continuano a funzionare, ma la traccia si è interrotta: riconcedi la posizione.");
+    }
+  },{enableHighAccuracy:true,maximumAge:2000,timeout:25000});
+}
+function hav(a,b){
+  var R=6371000,p=Math.PI/180;
+  var dla=(b.lat-a.lat)*p, dlo=(b.lon-a.lon)*p;
+  var h=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dlo/2)*Math.sin(dlo/2);
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function grpTrk(g){ var o=[],i; for(i=0;i<trk.length;i++) if(trk[i].grp===g) o.push(trk[i]); return o; }
+function grpPts(g){ var o=[],i; for(i=0;i<pts.length;i++) if(pts[i].grp===g) o.push(pts[i]); return o; }
+function trkLen(g){ var a=grpTrk(g),s=0,i; for(i=1;i<a.length;i++) s+=hav(a[i-1],a[i]); return s; }
+function groups(){
+  var o=[],seen={},i;
+  for(i=0;i<pts.length;i++) if(!seen[pts[i].grp]){ seen[pts[i].grp]=1; o.push(pts[i].grp); }
+  for(i=0;i<trk.length;i++) if(!seen[trk[i].grp]){ seen[trk[i].grp]=1; o.push(trk[i].grp); }
+  if(!seen[curGrp]) o.push(curGrp);
+  return o;
+}
+function keepAwake(){
+  if(!("wakeLock" in navigator)){ $("vLock").textContent="non gestito"; return; }
+  navigator.wakeLock.request("screen").then(function(s){
+    $("vLock").textContent="acceso"; $("dLock").className="dot ok";
+    s.addEventListener("release",function(){ $("vLock").textContent="rilasciato"; $("dLock").className="dot warn"; });
+  }).catch(function(){ $("vLock").textContent="rifiutato"; $("dLock").className="dot warn"; });
+}
+
+/* ===================== segnare un punto ===================== */
+function mark(fromAuto){
+  if(!last){ sigNo(); banner("bad","Nessuna lettura dal sensore."); return; }
+  if(marking) return;
+  marking=true;
+  var t=$("mkTxt"), old=t.textContent;
+  if(!fromAuto) t.textContent="TIENI FERMO…";
+  var acc=[], t0=Date.now(), DUR=fromAuto?500:1500;
+  var iv=setInterval(function(){
+    if(last) acc.push({l:last.lon,t:last.tra,sd:last.sd});
+    mkFill(Math.min(100,(Date.now()-t0)/DUR*100));
+  },55);
+  setTimeout(function(){
+    clearInterval(iv); mkFill(0); marking=false;
+    t.textContent=auto?"MODO AUTOMATICO":old;
+    if(!acc.length){ sigNo(); msg("lettura interrotta — riprova"); return; }
+    var sl=0,st=0,sdm=0,i;
+    for(i=0;i<acc.length;i++){ sl+=acc[i].l; st+=acc[i].t; if(acc[i].sd>sdm) sdm=acc[i].sd; }
+    var lon=sl/acc.length, tra=st/acc.length;
+    var step=parseFloat(String($("fStep").value).replace(",",".")); if(!(step>0)) step=5;
+    var d=new Date(), p=plane(lon,tra);
+    pts.push({n:grpPts(curGrp).length+1, grp:curGrp,
+      iso:d.toISOString(), ora:d.toLocaleTimeString("it-IT",{hour12:false}), epoch:d.getTime(), step:step,
+      lonD:lon,traD:tra,lonP:p.pl,traP:p.pt,maxD:p.am,maxP:p.pm,dir:p.dir,
+      sd:sdm,mode:last.mode,auto:!!fromAuto,
+      pose:last.pose.k, zL:last.zero.l, zT:last.zero.t, cal:CAL.when?1:0,
+      lat:gps?gps.coords.latitude:null, lon_:gps?gps.coords.longitude:null,
+      gacc:gps?gps.coords.accuracy:null,
+      galt:gps&&gps.coords.altitude!==null?gps.coords.altitude:null,
+      gaccAlt:gps&&gps.coords.altitudeAccuracy!==null?gps.coords.altitudeAccuracy:null,
+      head:heading, note:$("fNote").value.trim()});
+    $("fNote").value=""; sinceExp++;
+    save(); render();
+    var n=pts[pts.length-1].n;
+    if(sdm>1.2){ sigWeak(); msg("punto <b>"+n+"</b> · <b>"+conv(lon,UNITS[unit])+"</b> · instabile"); }
+    else { sigOk(); msg("punto <b>"+n+"</b> · <b>"+conv(lon,UNITS[unit])+"</b>"); }
+    if(sinceExp>0&&sinceExp%20===0)
+      banner("warn","<b>"+sinceExp+" punti e nessuna esportazione.</b> Vai su ESPORTA e premi CONDIVIDI: cinque secondi.");
+  },DUR);
+}
+
+/* ===================== calcoli ===================== */
+/* Un gruppo e' un rilievo a se': le quote ripartono da zero a ogni gruppo.
+   Il passo si cammina SUL terreno, quindi dh = passo*sin, pianta = passo*cos. */
+function derive(g){
+  var P=grpPts(g), cum=0,dev=0,plan=0,up=0,dn=0,maxA=null,maxN=null,rows=[];
+  for(var i=0;i<P.length;i++){
+    var p=P[i], dh=0, dp=0;
+    if(i>0){
+      var a=(P[i-1].lonD+p.lonD)/2*Math.PI/180, L=P[i-1].step;
+      dh=L*Math.sin(a); dp=L*Math.cos(a);
+      cum+=dh; dev+=L; plan+=dp;
+      if(dh>0) up+=dh; else dn-=dh;
+    }
+    if(maxA===null||Math.abs(p.maxP)>Math.abs(maxA)){ maxA=p.maxP; maxN=p.n; }
+    rows.push({p:p,dh:dh,cum:cum,dev:dev,plan:plan,grp:g});
+  }
+  return {grp:g,rows:rows,cum:cum,dev:dev,plan:plan,up:up,dn:dn,maxA:maxA,maxN:maxN};
+}
+function selGroups(){ var v=$("fExp")?$("fExp").value:""; return (v===""||v==="*")?groups():[v]; }
+
+/* ===================== disegno ===================== */
+function render(){
+  var D=derive(curGrp);
+  $("vN").textContent=grpPts(curGrp).length;
+  $("vTrk").textContent=fmt(trkLen(curGrp),0)+" m";
+  $("grpName").textContent=curGrp; $("sGrp").textContent=curGrp;
+  $("sDev").textContent=fmt(D.dev,1)+" m";
+  $("sPlan").textContent=fmt(D.plan,1)+" m";
+  $("sNet").textContent=fmt(D.cum,2)+" m";
+  $("sUpDn").textContent=fmt(D.up,1)+" / "+fmt(D.dn,1);
+  $("sAvg").textContent=D.plan>0?fmt(D.cum/D.plan*100,1)+" %":"—";
+  $("sMax").textContent=D.maxA===null?"—":fmt(D.maxA,1)+" % (n."+D.maxN+")";
+  var lb="", P=grpPts(curGrp);
+  if(P.length>2&&P[0].lat!==null&&P[P.length-1].lat!==null){
+    var d=hav({lat:P[0].lat,lon:P[0].lon_},{lat:P[P.length-1].lat,lon:P[P.length-1].lon_});
+    if(d<30){
+      var k=Math.abs(D.cum)<0.5?"ok":(Math.abs(D.cum)<1.5?"warn":"bad");
+      lb='<div class="banner '+k+'" style="margin:12px 0 0"><b>Anello chiuso</b> — ultimo punto a '+fmt(d,1)+
+        ' m dal primo. Il dislivello netto dovrebbe essere zero: vale <b>'+fmt(D.cum,2)+
+        ' m</b>. È l\'errore vero del rilievo, non una stima.</div>';
+    }
+  }
+  $("loopBox").innerHTML=lb;
+  renderGroups();
+  var head=["n","ora","prog m","long °","long %","tr °","max %","dh m","quota rel",
+            "assetto","lat","lon","±m","buss","nota"];
+  var h="<tr>",i;
+  for(i=0;i<head.length;i++) h+="<th>"+head[i]+"</th>";
+  $("tbl").tHead.innerHTML=h+"</tr>";
+  var b="";
+  for(var j=D.rows.length-1;j>=0;j--){
+    var r=D.rows[j], p=r.p;
+    b+='<tr'+(p.sd>1.2?' class="unst"':'')+">"+
+      "<td>"+p.n+(p.auto?"·":"")+"</td><td>"+p.ora+"</td><td>"+fmt(r.dev,1)+"</td>"+
+      "<td>"+fmt(p.lonD,2)+"</td><td>"+fmt(p.lonP,1)+"</td><td>"+fmt(p.traD,2)+"</td>"+
+      "<td>"+fmt(p.maxP,1)+"</td><td>"+fmt(r.dh,2)+"</td><td>"+fmt(r.cum,2)+"</td>"+
+      "<td>"+esc(p.pose||"—")+"</td>"+
+      "<td>"+(p.lat===null?"—":p.lat.toFixed(6))+"</td>"+
+      "<td>"+(p.lon_===null?"—":p.lon_.toFixed(6))+"</td>"+
+      "<td>"+(p.gacc===null?"—":Math.round(p.gacc))+"</td>"+
+      "<td>"+(p.head===null||p.head===undefined?"—":fmt(p.head,0))+"</td>"+
+      '<td class="note">'+esc(p.note)+"</td></tr>";
+  }
+  $("tbl").tBodies[0].innerHTML=b;
+  fillExp();
+  if(!$("t2").hidden){ drawProfile(D); drawPlan(curGrp); }
+  if(!$("outBox").hidden) $("out").value=asText();
+}
+function renderGroups(){
+  var G=groups(), h="", i;
+  for(i=0;i<G.length;i++){
+    var g=G[i], D=derive(g);
+    h+='<div class="gi'+(g===curGrp?" cur":"")+'"><div class="gn">'+esc(g)+
+      (g===curGrp?' <span class="lbl">in corso</span>':'')+"</div>"+
+      '<div class="gs">'+grpPts(g).length+" punti · "+grpTrk(g).length+" fix · sviluppo "+fmt(D.dev,1)+
+      " m · netto "+fmt(D.cum,2)+" m</div>";
+    if(g!==curGrp) h+='<div class="row" style="margin-top:7px"><button class="sm grow" data-g="'+esc(g)+'">Riprendi questo gruppo</button></div>';
+    h+="</div>";
+  }
+  $("grpList").innerHTML=h;
+  var bs=$("grpList").querySelectorAll("[data-g]");
+  for(i=0;i<bs.length;i++) bs[i].addEventListener("click",function(){
+    curGrp=this.getAttribute("data-g"); armDel=null; save(); render();
+    banner("ok","Gruppo in corso: <b>"+esc(curGrp)+"</b>.");
+  });
+}
+function fillExp(){
+  var s=$("fExp"), G=groups(), cur=s.value, h='<option value="">Tutti i gruppi ('+pts.length+" punti)</option>",i;
+  for(i=0;i<G.length;i++) h+='<option value="'+esc(G[i])+'">'+esc(G[i])+" ("+grpPts(G[i]).length+" punti)</option>";
+  s.innerHTML=h; if(cur) s.value=cur;
+}
+function cssv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function cv(c){
+  var r=window.devicePixelRatio||1, w=c.clientWidth||300, h=Math.max(160,Math.round(w*0.62));
+  c.width=Math.round(w*r); c.height=Math.round(h*r); c.style.height=h+"px";
+  var x=c.getContext("2d"); x.setTransform(r,0,0,r,0,0); x.clearRect(0,0,w,h);
+  x.font="11px "+cssv("--f-ui"); x.textBaseline="alphabetic";
+  return {x:x,w:w,h:h};
+}
+function drawProfile(D){
+  var g=cv($("cProf")), x=g.x, W=g.w, H=g.h, m=32, i;
+  x.fillStyle=cssv("--ink-2");
+  if(D.rows.length<2){ x.fillText("Servono almeno due punti in questo gruppo.",10,22); return; }
+  var xs=[],ys=[];
+  for(i=0;i<D.rows.length;i++){ xs.push(D.rows[i].plan); ys.push(D.rows[i].cum); }
+  var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+  var y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys);
+  if(y1-y0<1){ y0-=0.5; y1+=0.5; } if(x1-x0<1) x1=x0+1;
+  function px(v){ return m+(v-x0)/(x1-x0)*(W-m-10); }
+  function py(v){ return H-24-(v-y0)/(y1-y0)*(H-24-16); }
+  x.strokeStyle=cssv("--line"); x.lineWidth=1;
+  x.beginPath(); x.moveTo(m,H-24); x.lineTo(W-6,H-24); x.moveTo(m,12); x.lineTo(m,H-24); x.stroke();
+  if(y0<0&&y1>0){ x.setLineDash([3,3]); x.beginPath(); x.moveTo(m,py(0)); x.lineTo(W-6,py(0)); x.stroke(); x.setLineDash([]); }
+  x.fillStyle=cssv("--ink-2");
+  x.fillText(fmt(y1,1)+" m",2,py(y1)+4); x.fillText(fmt(y0,1)+" m",2,py(y0)+4);
+  x.fillText(fmt(x1,0)+" m in pianta",m+2,H-8);
+  x.strokeStyle=cssv("--act"); x.lineWidth=2.5; x.beginPath();
+  for(i=0;i<D.rows.length;i++){ var a=px(D.rows[i].plan), b=py(D.rows[i].cum);
+    if(i===0) x.moveTo(a,b); else x.lineTo(a,b); }
+  x.stroke(); x.fillStyle=cssv("--act");
+  for(i=0;i<D.rows.length;i++){ x.beginPath(); x.arc(px(D.rows[i].plan),py(D.rows[i].cum),3,0,6.3); x.fill(); }
+}
+function drawPlan(g){
+  var G=cv($("cPlan")), x=G.x, W=G.w, H=G.h, m=22, i;
+  x.fillStyle=cssv("--ink-2");
+  var T=grpTrk(g), P=grpPts(g), all=[];
+  for(i=0;i<T.length;i++) all.push({lat:T[i].lat,lon:T[i].lon});
+  var mk=[];
+  for(i=0;i<P.length;i++) if(P[i].lat!==null){ mk.push({lat:P[i].lat,lon:P[i].lon_,n:P[i].n}); all.push({lat:P[i].lat,lon:P[i].lon_}); }
+  if(all.length<2){ x.fillText("In attesa di posizioni GPS.",10,22); return; }
+  var la=0; for(i=0;i<all.length;i++) la+=all[i].lat; la/=all.length;
+  var kx=111320*Math.cos(la*Math.PI/180), ky=110540, X=[],Y=[];
+  for(i=0;i<all.length;i++){ X.push(all[i].lon*kx); Y.push(all[i].lat*ky); }
+  var ax=Math.min.apply(null,X), bx=Math.max.apply(null,X);
+  var ay=Math.min.apply(null,Y), by=Math.max.apply(null,Y);
+  var sp=Math.max(bx-ax,by-ay,8), cx=(ax+bx)/2, cy=(ay+by)/2, s=(Math.min(W,H)-2*m)/sp;
+  function px(v){ return W/2+(v*kx-cx)*s; }
+  function py(v){ return H/2-(v*ky-cy)*s; }
+  if(T.length>1){
+    x.strokeStyle=cssv("--data"); x.lineWidth=2; x.beginPath();
+    for(i=0;i<T.length;i++){ var a=px(T[i].lon), b=py(T[i].lat); if(i===0) x.moveTo(a,b); else x.lineTo(a,b); }
+    x.stroke();
+  }
+  x.fillStyle=cssv("--act");
+  for(i=0;i<mk.length;i++){
+    var fx=px(mk[i].lon), fy=py(mk[i].lat);
+    x.beginPath(); x.arc(fx,fy,4.5,0,6.3); x.fill();
+    if(mk.length<=24){ x.fillStyle=cssv("--ink"); x.fillText(mk[i].n,fx+6,fy-5); x.fillStyle=cssv("--act"); }
+  }
+  x.strokeStyle=cssv("--ink-2"); x.fillStyle=cssv("--ink-2"); x.lineWidth=1.5;
+  x.beginPath(); x.moveTo(W-16,24); x.lineTo(W-16,8); x.moveTo(W-20,13); x.lineTo(W-16,8); x.lineTo(W-12,13); x.stroke();
+  x.fillText("N",W-20,36);
+  var want=sp/3, nice=Math.pow(10,Math.floor(Math.log(want)/Math.LN10));
+  if(want/nice>=5) nice*=5; else if(want/nice>=2) nice*=2;
+  var pl=nice*s;
+  x.beginPath(); x.moveTo(10,H-12); x.lineTo(10+pl,H-12); x.moveTo(10,H-16); x.lineTo(10,H-8);
+  x.moveTo(10+pl,H-16); x.lineTo(10+pl,H-8); x.stroke();
+  x.fillText(fmt(nice,0)+" m",12+pl,H-8);
+}
+
+/* ===================== esportazioni ===================== */
+var COLS=["gruppo","n","iso","ora","prog_m","long_gradi","long_pct","trasv_gradi","trasv_pct","max_pct",
+  "dh_m","quota_rel_m","lat","lon","gps_acc_m","gps_quota_m","gps_quota_acc_m","bussola_gradi",
+  "stabilita_gradi","assetto","zero_long","zero_trasv","sensore_calibrato","modo","auto","nota"];
+var I_GRP=COLS.indexOf("gruppo"), I_LAT=COLS.indexOf("lat"), I_LON=COLS.indexOf("lon"),
+    I_NOTA=COLS.indexOf("nota"), I_POSE=COLS.indexOf("assetto");
+function cells(r){
+  var p=r.p;
+  return [r.grp,p.n,p.iso,p.ora,fmt(r.dev,1),fmt(p.lonD,2),fmt(p.lonP,2),fmt(p.traD,2),fmt(p.traP,2),
+    fmt(p.maxP,2),fmt(r.dh,3),fmt(r.cum,3),
+    p.lat===null?"":p.lat.toFixed(7), p.lon_===null?"":p.lon_.toFixed(7),
+    p.gacc===null?"":fmt(p.gacc,1), p.galt===null?"":fmt(p.galt,1),
+    p.gaccAlt===null||p.gaccAlt===undefined?"":fmt(p.gaccAlt,1),
+    p.head===null||p.head===undefined?"":fmt(p.head,0), fmt(p.sd,2),
+    p.pose||"", fmt(p.zL===undefined?0:p.zL,3), fmt(p.zT===undefined?0:p.zT,3),
+    p.cal?"si":"no", p.mode, p.auto?"auto":"mano", (p.note||"")];
+}
+function hdrLines(){
+  var G=selGroups(), L=["SESTANTE 2 — rilievo pendenze",
+    "Terzanello di Sopra, Comune di Pianoro (BO)",
+    "Esportato: "+new Date().toLocaleString("it-IT"),
+    "Gruppi: "+G.length+" ("+G.join(" · ")+")",
+    "Sensore: "+sensorMode+" · segni: long "+(invL>0?"+":"-")+", trasv "+(invT>0?"+":"-"),
+    "Calibrazione sensore: "+(CAL.when?("fatta il "+CAL.when+" · zero "+fmt(CAL.off[0],3)+"/"+fmt(CAL.off[1],3)+
+      "/"+fmt(CAL.off[2],3)+" · scala "+fmt(CAL.sc[0],3)+"/"+fmt(CAL.sc[1],3)+"/"+fmt(CAL.sc[2],3)):"nessuna"),
+    "Convenzione: passo misurato SUL terreno (distanza inclinata). dh = passo * sin(angolo).",
+    "Le quote relative ripartono da zero a ogni gruppo.",""], i;
+  var zk=Object.keys(ZEROS);
+  for(i=0;i<zk.length;i++) L.push("Zero di appoggio ["+zk[i]+"]: long "+fmt(ZEROS[zk[i]].l,3)+
+    "° trasv "+fmt(ZEROS[zk[i]].t,3)+"° · "+ZEROS[zk[i]].when);
+  if(zk.length) L.push("");
+  for(i=0;i<G.length;i++){
+    var D=derive(G[i]);
+    L.push("["+G[i]+"] "+D.rows.length+" punti · traccia "+grpTrk(G[i]).length+" fix, "+fmt(trkLen(G[i]),0)+
+      " m · sviluppo "+fmt(D.dev,1)+" m · in pianta "+fmt(D.plan,1)+" m · dislivello netto "+fmt(D.cum,2)+
+      " m · salita "+fmt(D.up,1)+" / discesa "+fmt(D.dn,1)+" m · media "+(D.plan>0?fmt(D.cum/D.plan*100,1)+" %":"—")+
+      " · peggiore "+(D.maxA===null?"—":fmt(D.maxA,1)+" %"));
+  }
+  return L;
+}
+function allRows(){ var G=selGroups(),o=[],i,j;
+  for(i=0;i<G.length;i++){ var R=derive(G[i]).rows; for(j=0;j<R.length;j++) o.push(R[j]); } return o; }
+function asText(){
+  var L=hdrLines(), R=allRows(), i;
+  L.push(""); L.push("| "+COLS.join(" | ")+" |");
+  var dash=[]; for(i=0;i<COLS.length;i++) dash.push("---");
+  L.push("|"+dash.join("|")+"|");
+  for(i=0;i<R.length;i++){
+    var c=cells(R[i]);
+    c[I_GRP]=String(c[I_GRP]).replace(/\|/g,"/"); c[I_NOTA]=String(c[I_NOTA]).replace(/\|/g,"/");
+    L.push("| "+c.join(" | ")+" |");
+  }
+  return L.join("\n");
+}
+function asCsv(){
+  var R=allRows(), L=[COLS.join(";")], i;
+  for(i=0;i<R.length;i++){
+    var c=cells(R[i]);
+    c[I_GRP]='"'+String(c[I_GRP]).replace(/"/g,'""')+'"';
+    c[I_POSE]='"'+String(c[I_POSE]).replace(/"/g,'""')+'"';
+    c[I_LAT]=String(c[I_LAT]).replace(".",","); c[I_LON]=String(c[I_LON]).replace(".",",");
+    c[I_NOTA]='"'+String(c[I_NOTA]).replace(/"/g,'""')+'"';
+    L.push(c.join(";"));
+  }
+  return L.join("\r\n");
+}
+function asGpx(){
+  var G=selGroups(), L=['<?xml version="1.0" encoding="UTF-8"?>',
+    '<gpx version="1.1" creator="Sestante 2 - SM Terreno" xmlns="http://www.topografix.com/GPX/1/1">',
+    "<metadata><name>"+esc("Sestante 2 "+stamp())+"</name><desc>"+esc(hdrLines().join(" | "))+
+    "</desc><time>"+new Date().toISOString()+"</time></metadata>"], i, j;
+  for(i=0;i<G.length;i++){
+    var R=derive(G[i]).rows;
+    for(j=0;j<R.length;j++){
+      var r=R[j], p=r.p; if(p.lat===null) continue;
+      var dsc="["+G[i]+"] long "+fmt(p.lonD,2)+"° / "+fmt(p.lonP,1)+"% · trasv "+fmt(p.traD,2)+
+        "° / "+fmt(p.traP,1)+"% · max "+fmt(p.maxP,1)+"% · dh "+fmt(r.dh,2)+" m · quota rel "+
+        fmt(r.cum,2)+" m · prog "+fmt(r.dev,1)+" m · assetto "+(p.pose||"—")+" · GPS ±"+fmt(p.gacc,0)+
+        " m"+(p.note?" · "+p.note:"")+(p.sd>1.2?" · LETTURA INSTABILE":"");
+      L.push('<wpt lat="'+p.lat.toFixed(7)+'" lon="'+p.lon_.toFixed(7)+'">'+
+        (p.galt===null?"":"<ele>"+p.galt.toFixed(1)+"</ele>")+
+        "<time>"+p.iso+"</time><name>"+esc("P"+p.n+" "+fmt(p.lonP,0)+"%")+"</name>"+
+        "<cmt>"+esc(G[i])+"</cmt><desc>"+esc(dsc)+"</desc><type>"+esc(G[i])+"</type><sym>Flag</sym></wpt>");
+    }
+  }
+  for(i=0;i<G.length;i++){
+    var T=grpTrk(G[i]); if(T.length<2) continue;
+    L.push("<trk><name>"+esc(G[i])+"</name><type>"+esc(G[i])+"</type><trkseg>");
+    for(j=0;j<T.length;j++) L.push('<trkpt lat="'+T[j].lat.toFixed(7)+'" lon="'+T[j].lon.toFixed(7)+'">'+
+      (T[j].ele===null||T[j].ele===undefined?"":"<ele>"+T[j].ele+"</ele>")+
+      "<time>"+new Date(T[j].t).toISOString()+"</time></trkpt>");
+    L.push("</trkseg></trk>");
+  }
+  L.push("</gpx>"); return L.join("\n");
+}
+function asKml(){
+  var G=selGroups(), L=['<?xml version="1.0" encoding="UTF-8"?>',
+    '<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc("Sestante 2 — rilievo pendenze")+"</name>",
+    "<description><![CDATA["+hdrLines().join("<br>")+"]]></description>",
+    '<Style id="tl"><LineStyle><color>ff1c60f2</color><width>3</width></LineStyle></Style>'], i, j;
+  for(i=0;i<G.length;i++){
+    var D=derive(G[i]), R=D.rows, T=grpTrk(G[i]);
+    L.push("<Folder><name>"+esc(G[i])+"</name><description><![CDATA["+R.length+" punti · sviluppo "+
+      fmt(D.dev,1)+" m · dislivello netto "+fmt(D.cum,2)+" m]]></description>");
+    for(j=0;j<R.length;j++){
+      var r=R[j], p=r.p; if(p.lat===null) continue;
+      var dsc="gruppo: "+esc(G[i])+"<br>longitudinale "+fmt(p.lonD,2)+"° = "+fmt(p.lonP,1)+" %<br>"+
+        "trasversale "+fmt(p.traD,2)+"° = "+fmt(p.traP,1)+" %<br>massima del piano "+fmt(p.maxP,1)+" %<br>"+
+        "dislivello segmento "+fmt(r.dh,2)+" m<br>quota relativa "+fmt(r.cum,2)+" m<br>progressiva "+
+        fmt(r.dev,1)+" m<br>assetto "+esc(p.pose||"—")+"<br>ora "+p.ora+"<br>GPS ±"+fmt(p.gacc,0)+" m"+
+        (p.note?"<br>nota: "+esc(p.note):"")+(p.sd>1.2?"<br><b>lettura instabile</b>":"");
+      L.push("<Placemark><name>"+esc("P"+p.n+" — "+fmt(p.lonP,0)+"%")+"</name><description><![CDATA["+
+        dsc+"]]></description><Point><coordinates>"+p.lon_.toFixed(7)+","+p.lat.toFixed(7)+","+
+        (p.galt===null?"0":p.galt.toFixed(1))+"</coordinates></Point></Placemark>");
+    }
+    if(T.length>1){
+      var co=[];
+      for(j=0;j<T.length;j++) co.push(T[j].lon.toFixed(7)+","+T[j].lat.toFixed(7)+","+
+        (T[j].ele===null||T[j].ele===undefined?"0":T[j].ele));
+      L.push("<Placemark><name>Traccia — "+esc(G[i])+"</name><styleUrl>#tl</styleUrl><LineString>"+
+        "<tessellate>1</tessellate><coordinates>"+co.join(" ")+"</coordinates></LineString></Placemark>");
+    }
+    L.push("</Folder>");
+  }
+  L.push("</Document></kml>"); return L.join("\n");
+}
+function fname(ext){ var G=selGroups();
+  return "sestante2-"+(G.length===1?slug(G[0]):"tutti")+"-"+stamp()+"."+ext; }
+function nothing(){ if(!pts.length&&trk.length<2){ banner("warn","Non c'è ancora niente da esportare."); return true; } return false; }
+function share(kind){
+  if(nothing()) return;
+  sinceExp=0;
+  var txt,ext,mime;
+  if(kind==="gpx"){ txt=asGpx(); ext="gpx"; mime="application/gpx+xml"; }
+  else if(kind==="kml"){ txt=asKml(); ext="kml"; mime="application/vnd.google-earth.kml+xml"; }
+  else { txt=asText(); ext="txt"; mime="text/plain"; }
+  var nm=fname(ext), f=null;
+  try{ f=new File([txt],nm,{type:mime}); }catch(e){}
+  function fb(){ $("outBox").hidden=false; $("out").value=txt; $("out").select();
+    banner("warn","Questo browser non apre il menù di condivisione. Il contenuto è selezionato qui sotto."); }
+  function tryText(){
+    if(navigator.share) navigator.share({title:"Sestante 2",text:asText()}).then(function(){
+      banner("ok","Condiviso come testo."); },function(e){ if(!(e&&e.name==="AbortError")) fb(); });
+    else fb();
+  }
+  if(f&&navigator.canShare&&navigator.share){
+    var ok=false; try{ ok=navigator.canShare({files:[f]}); }catch(e2){ ok=false; }
+    if(ok){ navigator.share({files:[f],title:nm}).then(function(){
+        banner("ok","<b>"+ext.toUpperCase()+"</b> consegnato all'app che hai scelto."); sigOk();
+      },function(e){ if(e&&e.name==="AbortError"){ msg("condivisione annullata"); return; } tryText(); });
+      return; }
+  }
+  tryText();
+}
+function dl(txt,ext,mime){
+  if(nothing()) return;
+  sinceExp=0;
+  try{
+    var bl=new Blob([ext==="csv"?"﻿"+txt:txt],{type:mime+";charset=utf-8"});
+    var u=URL.createObjectURL(bl), a=document.createElement("a");
+    a.href=u; a.download=fname(ext);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(u); },5000);
+    banner("ok","<b>"+ext.toUpperCase()+"</b> salvato nei Download come <span class=\"raw\">"+esc(fname(ext))+"</span>");
+  }catch(e){ banner("bad","Scaricamento non riuscito. Usa COPIA TUTTO."); }
+}
+
+/* ===================== avvio ===================== */
+function tab(id){
+  var ss=["t1","t2","t3"], i;
+  for(i=0;i<ss.length;i++) $(ss[i]).hidden=(ss[i]!==id);
+  var bs=document.querySelectorAll("nav button");
+  for(i=0;i<bs.length;i++) bs[i].setAttribute("aria-selected",bs[i].getAttribute("data-tab")===id?"true":"false");
+  $("bar").hidden=(id!=="t1");
+  armDel=null; armReset=null;
+  $("bDelGrp").className="sm grow"; $("bDelGrp").textContent="Cancella il gruppo in corso";
+  $("bReset").className="sm grow"; $("bReset").textContent="Azzera tutto";
+  render(); window.scrollTo(0,0);
+}
+function start(){
+  load();
+  var nb=document.querySelectorAll("nav button"), i;
+  for(i=0;i<nb.length;i++) nb[i].addEventListener("click",function(){ tab(this.getAttribute("data-tab")); });
+
+  $("rBig").parentNode.addEventListener("click",function(){ unit=(unit+1)%UNITS.length; save(); live(); sigArm(); });
+  $("bMark").addEventListener("click",function(){
+    if(auto){ msg("in automatico non serve premere: appoggia il telefono"); return; } mark(false); });
+  $("mAuto").addEventListener("click",function(){ setMode(true); sigArm(); });
+  $("mMan").addEventListener("click",function(){ setMode(false); });
+
+  $("bNewGrp").addEventListener("click",function(){ $("grpForm").hidden=false; $("fGrp").value=""; $("fGrp").focus(); });
+  $("bGrpNo").addEventListener("click",function(){ $("grpForm").hidden=true; });
+  function newGroup(){
+    var v=$("fGrp").value.trim();
+    if(!v){ banner("warn","Il gruppo ha bisogno di un nome."); return; }
+    var esiste=grpPts(v).length||grpTrk(v).length;
+    curGrp=v; $("grpForm").hidden=true; armDel=null; save(); render();
+    if(esiste) banner("warn","Quel nome esiste già: ho <b>ripreso</b> quel gruppo. I punti nuovi si aggiungono in coda.");
+    else { sigOk(); banner("ok","Nuovo gruppo: <b>"+esc(v)+"</b>."); }
+  }
+  $("bGrpOk").addEventListener("click",newGroup);
+  $("fGrp").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); newGroup(); } });
+
+  $("bCalGo").addEventListener("click",calStart);
+  $("bCalTake").addEventListener("click",calTake);
+  $("bCalSkip").addEventListener("click",function(){
+    calIdx++; if(calIdx<6) calDraw(); else calFinish(); });
+  $("bCalQuit").addEventListener("click",function(){ calOn=false; $("cal").hidden=true; });
+  $("bCalZero").addEventListener("click",function(){
+    if(!CAL.when){ banner("warn","Non c'è nessuna calibrazione da azzerare."); return; }
+    CAL={off:[0,0,0],sc:[1,1,1],when:null}; ZEROS={}; calShow(); save();
+    banner("warn","Calibrazione azzerata, e con lei gli zeri di appoggio.");
+  });
+  $("bZero").addEventListener("click",zStart);
+  $("bZStop").addEventListener("click",zStop);
+  $("bZTake").addEventListener("click",zTake);
+  $("bFreeze").addEventListener("click",function(){
+    if(FREEZE){ FREEZE=null; this.textContent="Blocca assetto"; this.className="sm grow";
+      banner("warn","Assetto sbloccato: torna il riconoscimento automatico."); return; }
+    if(!last){ sigNo(); return; }
+    FREEZE=frameFrom(last.g); this.textContent="Sblocca assetto"; this.className="sm grow on";
+    sigArm();
+    banner("ok","<b>Assetto bloccato</b> sulla posizione attuale, che adesso vale zero. Non cambia più da solo. Prendi uno <b>zero di appoggio</b> per questo assetto se vuoi togliere anche l'errore residuo.");
+  });
+
+  $("bUndo").addEventListener("click",function(){
+    var P=grpPts(curGrp);
+    if(!P.length){ banner("warn","Questo gruppo non ha punti."); return; }
+    pts.splice(pts.indexOf(P[P.length-1]),1);
+    var Q=grpPts(curGrp); for(var j=0;j<Q.length;j++) Q[j].n=j+1;
+    save(); render(); beep(500,160,0.22); banner("warn","Ultimo punto del gruppo eliminato.");
+  });
+  $("bDelGrp").addEventListener("click",function(){
+    if(!grpPts(curGrp).length&&!grpTrk(curGrp).length){ banner("warn","Il gruppo è già vuoto."); return; }
+    if(armDel!==curGrp){ armDel=curGrp; this.className="sm grow danger";
+      this.textContent="SICURO? Premi di nuovo"; banner("warn","Premi di nuovo per cancellare <b>"+esc(curGrp)+"</b>."); return; }
+    var t=asText();
+    pts=pts.filter(function(p){ return p.grp!==curGrp; });
+    trk=trk.filter(function(p){ return p.grp!==curGrp; });
+    armDel=null; this.className="sm grow"; this.textContent="Cancella il gruppo in corso";
+    var G=groups(); curGrp=G.length?G[G.length-1]:defGrp();
+    save(); render(); $("outBox").hidden=false; $("out").value=t;
+    banner("warn","Gruppo cancellato. <b>La fotografia è nel riquadro qui sotto.</b>");
+  });
+  $("bReset").addEventListener("click",function(){
+    if(!pts.length&&!trk.length) return;
+    if(!armReset){ armReset=true; this.className="sm grow danger";
+      this.textContent="SICURO? Azzera TUTTI i gruppi"; banner("bad","Questo cancella <b>tutti</b> i gruppi."); return; }
+    var t=asText(); pts=[]; trk=[]; curGrp=defGrp(); armReset=null;
+    this.className="sm grow"; this.textContent="Azzera tutto";
+    save(); render(); $("outBox").hidden=false; $("out").value=t;
+    banner("warn","Azzerato. <b>Il vecchio è nel riquadro qui sotto.</b>");
+  });
+  $("bInvL").addEventListener("click",function(){ invL=-invL; save(); sigArm(); banner("warn","Segno longitudinale invertito."); });
+  $("bInvT").addEventListener("click",function(){ invT=-invT; save(); sigArm(); banner("warn","Segno trasversale invertito."); });
+  $("bSound").addEventListener("click",function(){ sound=!sound; this.textContent="Suono: "+(sound?"acceso":"spento"); save(); if(sound) sigOk(); });
+  $("bTheme").addEventListener("click",function(){
+    var r=document.documentElement;
+    r.setAttribute("data-theme",r.getAttribute("data-theme")==="dark"?"light":"dark"); render(); if(last) live(); });
+  var tg=document.querySelectorAll("[data-tag]");
+  for(i=0;i<tg.length;i++) tg[i].addEventListener("click",function(){
+    var f=$("fNote"), v=this.getAttribute("data-tag");
+    f.value=f.value?f.value+", "+v:v; beep(1100,45,0.12); });
+  $("fExp").addEventListener("change",function(){ if(!$("outBox").hidden) $("out").value=asText(); });
+  $("bShow").addEventListener("click",function(){ $("outBox").hidden=false; $("out").value=asText(); $("out").scrollIntoView({block:"center"}); });
+  $("bCopy").addEventListener("click",function(){
+    if(nothing()) return;
+    sinceExp=0;
+    var t=asText();
+    function fb(){ $("outBox").hidden=false; $("out").value=t; $("out").select();
+      banner("warn","Appunti non concessi: il testo è selezionato qui sotto."); }
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(t).then(function(){ banner("ok","Copiato negli appunti."); sigOk(); },fb);
+    else fb();
+  });
+  $("bCsv").addEventListener("click",function(){ dl(asCsv(),"csv","text/csv"); });
+  $("bGpx").addEventListener("click",function(){ dl(asGpx(),"gpx","application/gpx+xml"); });
+  $("bKml").addEventListener("click",function(){ dl(asKml(),"kml","application/vnd.google-earth.kml+xml"); });
+  $("bShTxt").addEventListener("click",function(){ share("txt"); });
+  $("bShGpx").addEventListener("click",function(){ share("gpx"); });
+  $("bShKml").addEventListener("click",function(){ share("kml"); });
+  $("fStep").addEventListener("change",function(){ save(); render(); });
+  $("bSound").textContent="Suono: "+(sound?"acceso":"spento");
+  window.addEventListener("resize",function(){ if(!$("t2").hidden) render(); });
+  window.addEventListener("beforeunload",save);
+
+  function attach(){
+    window.addEventListener("devicemotion",onMotion);
+    window.addEventListener("deviceorientation",onOrient);
+    window.addEventListener("deviceorientationabsolute",onAbs);
+    window.addEventListener("deviceorientation",onAbs);
+  }
+  $("bGo").addEventListener("click",function(){
+    audioOn(); sigArm(); $("gate").hidden=true;
+    if(typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
+      DeviceMotionEvent.requestPermission().then(function(r){
+        if(r==="granted") attach(); else banner("bad","Permesso sensori negato.");
+      }).catch(function(){ attach(); });
+    } else attach();
+    startGps(); keepAwake();
+    setTimeout(function(){
+      if(!sensorSeen){ $("dSens").className="dot bad"; $("vSens").textContent="muto";
+        banner("bad","<b>Il sensore di inclinazione non risponde.</b> Apri la pagina da un indirizzo <span class=\"raw\">file:///</span> e non da <span class=\"raw\">content://</span>: dai Download di Chrome arriva senza identità e il browser le nega i sensori."); }
+    },2600);
+  });
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) keepAwake(); });
+  calShow(); setMode(false); render();
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
+</script>
+</body>
+</html>
