@@ -123,7 +123,6 @@ textarea{width:100%; min-height:130px; font-family:var(--f-num); font-size:11px;
   padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}
 #cal .in{max-width:520px; margin-inline:auto}
 #calPose{display:flex; justify-content:center; margin:12px 0}
-#calPose svg{width:min(62vw,230px); height:auto}
 .step{font-family:var(--f-num); font-size:12px; color:var(--ink-2); letter-spacing:.1em}
 #calName{font-size:21px; font-weight:800; margin:2px 0 4px}
 #calHow{color:var(--ink-2); font-size:13.5px}
@@ -131,6 +130,9 @@ textarea{width:100%; min-height:130px; font-family:var(--f-num); font-size:11px;
 .tick{width:26px; height:6px; border-radius:3px; background:var(--line)}
 .tick.done{background:var(--good)}
 .tick.now{background:var(--act)}
+#calBarBox{height:10px; border-radius:5px; background:var(--line); overflow:hidden; margin:10px 0 0}
+#calBar{height:100%; width:0%; background:var(--act); transition:width .08s linear}
+#calPose svg{width:min(70vw,260px); height:auto}
 
 #gate{position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:15px; padding:28px; text-align:center}
@@ -157,14 +159,16 @@ textarea{width:100%; min-height:130px; font-family:var(--f-num); font-size:11px;
   <div id="calHow">—</div>
   <div id="calPose"></div>
   <div class="ticks" id="calTicks"></div>
-  <div class="banner" id="calMsg" style="margin-top:12px">—</div>
+  <div id="calBarBox"><div id="calBar"></div></div>
+  <div class="banner" id="calMsg" style="margin-top:10px">—</div>
   <div class="row">
-    <button class="grow on" id="bCalTake">PRENDI</button>
+    <button class="grow" id="bCalTake">Forza la lettura</button>
     <button class="grow" id="bCalSkip">Salta questa</button>
     <button class="grow" id="bCalQuit">Esci</button>
   </div>
-  <p class="tip"><b>Perché sei posizioni.</b> Ogni asse dell'accelerometro deve vedere la gravità una volta in un verso e una volta nell'altro. Da quelle sei letture si ricavano zero e fattore di scala dei tre assi: è il difetto del chip, non dipende da come appoggi il telefono, e si fa <b>una volta sola nella vita</b>.<br><br>
-  Le facce di taglio ballano: usa lo spigolo di un tavolo o una scatola. Non serve essere precisi al grado — il metodo prende il massimo e il minimo di ogni asse.</p>
+  <p class="tip"><b>Non devi toccare niente.</b> L'app riconosce da sola in che posizione sei, aspetta che il telefono stia fermo un secondo e <b>scatta</b>. Sentirai un tic quando la posizione è quella giusta e <b>due note in salita</b> quando la lettura è presa: a quel punto passa alla successiva. A schermo in giù lo schermo è sul tavolo e non potresti premere niente — per questo va a orecchio.<br><br>
+  <b>Perché sei posizioni.</b> Ogni asse dell'accelerometro deve vedere la gravità una volta in un verso e una volta nell'altro. Da quelle sei letture si ricavano zero e fattore di scala dei tre assi: è il difetto del chip, non dipende da come appoggi il telefono, e si fa <b>una volta sola nella vita</b>.<br><br>
+  I fianchi ballano: appoggiali allo spigolo di un tavolo, a una scatola o a un libro. Non serve precisione al grado — il metodo prende il massimo e il minimo di ogni asse. <b>I tasti di accensione e volume</b> sono disegnati in arancione: sono il riferimento per distinguere i due fianchi.</p>
 </div></div>
 
 <nav role="tablist">
@@ -379,7 +383,7 @@ var buf=[], last=null, gps=null, heading=null;
 var sensorMode="—", sensorSeen=false, marking=false;
 var autoState="wait", autoT0=0, lockT0=0;
 var AC=null, armDel=null, armReset=null, sinceExp=0;
-var calIdx=0, calAcc=[], calOn=false;
+var calIdx=0, calAcc=[], calOn=false, calT0=0, calBuf=[];
 var zStep=0, z1=null;
 
 function $(i){ return document.getElementById(i); }
@@ -623,73 +627,146 @@ function setMode(a){
 }
 
 /* ===================== calibrazione a 6 posizioni ===================== */
+/* ===================== calibrazione a 6 posizioni =====================
+   Niente tocchi: a schermo in giu' lo schermo e' sul tavolo. L'app riconosce
+   da sola la posa dal sensore, aspetta che il telefono sia fermo e scatta,
+   confermando col suono. Il disegno e' costruito dalla STESSA terna di assi
+   che fa i conti, quindi non puo' contraddirli. */
 var CALSEQ=[
- {k:"piatto",        t:"Schermo in SU",        h:"Telefono appoggiato sul tavolo, schermo verso di te.",       f:"front",rot:0,  ax:2,s:1},
- {k:"capovolto",     t:"Schermo in GIÙ",       h:"Capovolto sul tavolo: vedi il retro e le fotocamere.",       f:"back", rot:0,  ax:2,s:-1},
- {k:"in piedi",      t:"IN PIEDI",             h:"Dritto in verticale, piedi del telefono appoggiati.",         f:"front",rot:0,  ax:1,s:1},
- {k:"a testa in giù",t:"A TESTA IN GIÙ",       h:"Verticale ma capovolto: la fotocamera frontale sta in basso.",f:"front",rot:180,ax:1,s:-1},
- {k:"di taglio A",   t:"DI TAGLIO, un fianco", h:"Appoggiato sul fianco lungo, schermo verso di te.",           f:"front",rot:90, ax:0,s:1},
- {k:"di taglio B",   t:"DI TAGLIO, l'altro",   h:"Sull'altro fianco lungo, schermo verso di te.",               f:"front",rot:270,ax:0,s:-1}
+ {k:"piatto",         t:"Schermo in SU",       h:"Sul tavolo, schermo verso di te.",                      ax:2,s: 1},
+ {k:"capovolto",      t:"Schermo in GIÙ",      h:"Capovolto: lo schermo tocca il tavolo, vedi il retro.", ax:2,s:-1},
+ {k:"in piedi",       t:"IN PIEDI",            h:"Dritto, in verticale, appoggiato sul bordo inferiore.", ax:1,s: 1},
+ {k:"a testa in giù", t:"A TESTA IN GIÙ",      h:"Verticale e capovolto: appoggiato sul bordo superiore, quello della fotocamera frontale.", ax:1,s:-1},
+ {k:"di taglio A",    t:"DI TAGLIO, tasti in ALTO", h:"Sul fianco lungo, con i tasti di accensione e volume rivolti verso l'alto.", ax:0,s: 1},
+ {k:"di taglio B",    t:"DI TAGLIO, tasti in BASSO",h:"Sull'altro fianco: i tasti guardano il tavolo.",   ax:0,s:-1}
 ];
-function phoneSvg(face,rot){
-  var body = face==="front"
-    ? '<rect x="-26" y="-54" width="52" height="108" rx="8" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.5"/>'+
-      '<rect x="-21" y="-47" width="42" height="94" rx="4" fill="var(--data)" opacity="0.18"/>'+
-      '<circle cx="0" cy="-42" r="3.2" fill="var(--ink)"/>'+
-      '<text x="0" y="-33" font-size="6" text-anchor="middle" fill="var(--ink-2)">frontale</text>'
-    : '<rect x="-26" y="-54" width="52" height="108" rx="8" fill="var(--ink)" stroke="var(--ink)" stroke-width="2.5"/>'+
-      '<rect x="-19" y="-47" width="17" height="30" rx="5" fill="var(--panel)" opacity="0.25"/>'+
-      '<circle cx="-10.5" cy="-41" r="3.6" fill="var(--panel)"/>'+
-      '<circle cx="-10.5" cy="-32" r="3.6" fill="var(--panel)"/>'+
-      '<circle cx="-10.5" cy="-23" r="2.6" fill="var(--panel)"/>'+
-      '<text x="6" y="-30" font-size="6" text-anchor="middle" fill="var(--panel)">retro</text>';
-  return '<svg viewBox="-60 -70 120 150" aria-hidden="true">'+
-    '<g transform="rotate('+rot+')">'+body+'</g>'+
-    '<line x1="-52" y1="64" x2="52" y2="64" stroke="var(--ink-2)" stroke-width="2.5"/>'+
-    '<path d="M0 44 L0 60 M-5 54 L0 60 L5 54" stroke="var(--act)" stroke-width="2.5" fill="none"/>'+
-    '<text x="0" y="76" font-size="7" text-anchor="middle" fill="var(--ink-2)">verso il basso</text></svg>';
+function poseByKey(k){ for(var i=0;i<POSES.length;i++) if(POSES[i].k===k) return POSES[i]; return POSES[0]; }
+
+/* --- disegno tridimensionale --------------------------------------------
+   Il telefono e' un parallelepipedo nel riferimento del dispositivo.
+   La posa porta l'asse e3 verso l'ALTO del mondo (e' la direzione in cui
+   punta la reazione alla gravita'), e2 verso il fondo, e1 a destra.
+   Proiezione obliqua, facce ordinate dal fondo al davanti. */
+function dev2world(v,F){ return [dot(v,F.e1), dot(v,F.e3), -dot(v,F.e2)]; }
+function prj(w){ return [w[0]+w[2]*0.42, -w[1]+w[2]*0.24]; }
+function calSvg(F){
+  var hx=30, hy=63, hz=4.5, i, j;
+  function C(a,b,c){ return [a*hx, b*hy, c*hz]; }
+  function P(a,b,c){ return [a,b,c]; }
+  var items=[];
+  function add(pts,fill,stroke,w){
+    var W=[], d=0;
+    for(var q=0;q<pts.length;q++){ var ww=dev2world(pts[q],F); W.push(ww); d+=ww[2]+ww[0]*0.12; }
+    items.push({W:W, d:d/pts.length, fill:fill, stroke:stroke||"none", w:w||0});
+  }
+  var SCR="var(--panel)", BCK="var(--ink)", EDG="var(--ink-2)", ACT="var(--act)";
+  /* sei facce */
+  add([C(-1,-1, 1),C( 1,-1, 1),C( 1, 1, 1),C(-1, 1, 1)], SCR, EDG, 1.6);          /* schermo  +Z */
+  add([C(-1,-1,-1),C(-1, 1,-1),C( 1, 1,-1),C( 1,-1,-1)], BCK, EDG, 1.6);          /* retro    -Z */
+  add([C(-1, 1,-1),C(-1, 1, 1),C( 1, 1, 1),C( 1, 1,-1)], EDG, EDG, 1);            /* testa    +Y */
+  add([C(-1,-1,-1),C( 1,-1,-1),C( 1,-1, 1),C(-1,-1, 1)], EDG, EDG, 1);            /* piedi    -Y */
+  add([C( 1,-1,-1),C( 1, 1,-1),C( 1, 1, 1),C( 1,-1, 1)], EDG, EDG, 1);            /* fianco tasti +X */
+  add([C(-1,-1,-1),C(-1,-1, 1),C(-1, 1, 1),C(-1, 1,-1)], EDG, EDG, 1);            /* fianco   -X */
+  /* vetro dello schermo */
+  add([C(-0.86,-0.92, 1.25),C(0.86,-0.92, 1.25),C(0.86,0.92, 1.25),C(-0.86,0.92, 1.25)],
+      "var(--data)", "none", 0);
+  /* fotocamera frontale: centrata in alto sullo schermo */
+  (function(){ var r=4.5, p=[], cy=0.84*hy;
+    for(i=0;i<8;i++){ var a=i*Math.PI/4; p.push([Math.cos(a)*r, cy+Math.sin(a)*r, hz*1.4]); }
+    add(p, "var(--ink)", "none", 0); })();
+  /* blocco fotocamere sul RETRO, in alto sul lato dei tasti */
+  add([[0.22*hx,0.52*hy,-hz*1.4],[0.80*hx,0.52*hy,-hz*1.4],[0.80*hx,0.90*hy,-hz*1.4],[0.22*hx,0.90*hy,-hz*1.4]],
+      "var(--panel)", "none", 0);
+  for(j=0;j<3;j++){ (function(k){ var r=4.2-k*0.5, p=[], cx=0.51*hx, cy=(0.82-k*0.13)*hy;
+    for(i=0;i<8;i++){ var a=i*Math.PI/4; p.push([cx+Math.cos(a)*r, cy+Math.sin(a)*r, -hz*1.6]); }
+    add(p, "var(--ink)", "none", 0); })(j); }
+  /* tasti accensione e volume sul fianco +X */
+  add([[hx*1.3,0.10*hy,-hz*0.5],[hx*1.3,0.34*hy,-hz*0.5],[hx*1.3,0.34*hy,hz*0.5],[hx*1.3,0.10*hy,hz*0.5]], ACT,"none",0);
+  add([[hx*1.3,0.40*hy,-hz*0.5],[hx*1.3,0.70*hy,-hz*0.5],[hx*1.3,0.70*hy,hz*0.5],[hx*1.3,0.40*hy,hz*0.5]], ACT,"none",0);
+
+  items.sort(function(a,b){ return a.d-b.d; });
+  /* piano d'appoggio: sotto al punto piu' basso */
+  var low=1e9;
+  for(i=0;i<items.length;i++) for(j=0;j<items[i].W.length;j++) if(items[i].W[j][1]<low) low=items[i].W[j][1];
+  var g=[], G=[[-95,low-1,-60],[95,low-1,-60],[95,low-1,60],[-95,low-1,60]];
+  for(i=0;i<4;i++) g.push(prj(G[i]));
+  var out='<svg viewBox="-115 -115 230 215" width="100%" height="100%" aria-hidden="true">'+
+    '<polygon points="'+g.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ")+
+    '" fill="var(--line)" opacity="0.45"/>';
+  for(i=0;i<items.length;i++){
+    var it=items[i], pts=[];
+    for(j=0;j<it.W.length;j++){ var p=prj(it.W[j]); pts.push(p[0].toFixed(1)+","+p[1].toFixed(1)); }
+    out+='<polygon points="'+pts.join(" ")+'" fill="'+it.fill+'" stroke="'+it.stroke+
+         '" stroke-width="'+it.w+'" stroke-linejoin="round"/>';
+  }
+  return out+"</svg>";
 }
+
 function calShow(){
   $("calState").innerHTML = CAL.when
     ? "calibrato il "+CAL.when+"<br>zero "+fmt(CAL.off[0],3)+" / "+fmt(CAL.off[1],3)+" / "+fmt(CAL.off[2],3)+
       " · scala "+fmt(CAL.sc[0],3)+" / "+fmt(CAL.sc[1],3)+" / "+fmt(CAL.sc[2],3)
     : "non calibrato — l'app usa il sensore come esce di fabbrica";
 }
-function calStart(){
-  calIdx=0; calAcc=[]; calOn=true; $("cal").hidden=false; calDraw();
-}
+function calStart(){ calIdx=0; calAcc=[]; calOn=true; calT0=0; calBuf=[]; $("cal").hidden=false; calDraw(); }
 function calDraw(){
   var p=CALSEQ[calIdx];
   $("calStep").textContent="POSIZIONE "+(calIdx+1)+" DI 6";
   $("calName").textContent=p.t;
   $("calHow").textContent=p.h;
-  $("calPose").innerHTML=phoneSvg(p.f,p.rot);
+  $("calPose").innerHTML=calSvg(poseByKey(p.k));
   var h="",i;
   for(i=0;i<6;i++) h+='<span class="tick'+(calAcc[i]?" done":(i===calIdx?" now":""))+'"></span>';
   $("calTicks").innerHTML=h;
-  $("calMsg").className="banner warn";
-  $("calMsg").textContent="Mettilo in questa posizione, tienilo fermo, premi PRENDI.";
+  calSay("warn","Mettilo in questa posizione e tienilo fermo. <b>Scatta da solo</b>: non devi toccare niente.");
+  calFill(0);
 }
+function calSay(k,h){ $("calMsg").className="banner "+k; $("calMsg").innerHTML=h; }
+function calFill(p){ $("calBar").style.width=p+"%"; }
+
+/* arrivano le letture grezze mentre la finestra di calibrazione e' aperta */
+var CHOLD=1300, CSTEADY=1.6;
 function calTick(r){
-  calOn && (window.__lastRaw=r);
-}
-function calTake(){
-  var r=window.__lastRaw;
-  if(!r){ sigNo(); $("calMsg").className="banner bad"; $("calMsg").textContent="Nessuna lettura dal sensore."; return; }
+  window.__lastRaw=r;
+  var now=Date.now(), i;
+  calBuf.push({g:norm(r), ts:now});
+  while(calBuf.length&&calBuf[0].ts<now-700) calBuf.shift();
+  if(calBuf.length<4) return;
+  var m=[0,0,0];
+  for(i=0;i<calBuf.length;i++){ m[0]+=calBuf[i].g[0]; m[1]+=calBuf[i].g[1]; m[2]+=calBuf[i].g[2]; }
+  m=norm(m);
+  var dev=0;
+  for(i=0;i<calBuf.length;i++){
+    var c=Math.max(-1,Math.min(1,dot(calBuf[i].g,m)));
+    var a=Math.acos(c)*180/Math.PI; if(a>dev) dev=a;
+  }
   var p=CALSEQ[calIdx];
-  var bi=0, bv=Math.abs(r[0]), i;
-  for(i=1;i<3;i++) if(Math.abs(r[i])>bv){ bv=Math.abs(r[i]); bi=i; }
-  var s=r[bi]>=0?1:-1;
-  if(bi!==p.ax||s!==p.s){
-    sigNo(); $("calMsg").className="banner bad";
-    $("calMsg").innerHTML="<b>Non è questa la posizione.</b> Il telefono adesso è <b>"+
-      esc(poseOf(norm(r)).n)+"</b>. Guarda il disegno e riprova — oppure salta.";
+  var bi=0, bv=Math.abs(m[0]);
+  for(i=1;i<3;i++) if(Math.abs(m[i])>bv){ bv=Math.abs(m[i]); bi=i; }
+  var s=m[bi]>=0?1:-1;
+  var giusta=(bi===p.ax&&s===p.s);
+  if(!giusta){
+    calT0=0; calFill(0);
+    calSay("warn","Non è ancora questa posizione — adesso il telefono è <b>"+esc(poseOf(m).n)+"</b>.");
     return;
   }
+  if(dev>CSTEADY){
+    calT0=0; calFill(0);
+    calSay("warn","Posizione giusta, ma <b>si muove</b>. Appoggialo e lascialo stare.");
+    return;
+  }
+  if(!calT0){ calT0=now; sigArm(); }
+  var f=Math.min(1,(now-calT0)/CHOLD);
+  calFill(f*100);
+  calSay("ok","Ci sono. Fermo ancora <b>"+fmt((CHOLD-(now-calT0))/1000,1)+" s</b>…");
+  if(now-calT0>=CHOLD){ calGrab(r); }
+}
+function calGrab(r){
   calAcc[calIdx]=r.slice();
-  sigOk(); calIdx++;
-  if(calIdx<6){ calDraw(); return; }
-  calFinish();
+  calT0=0; calBuf=[]; calFill(0); sigOk();
+  calIdx++;
+  if(calIdx<6){ setTimeout(calDraw,350); calSay("ok","<b>Presa.</b> Passa alla posizione successiva."); }
+  else calFinish();
 }
 function calFinish(){
   var off=[0,0,0], sc=[1,1,1], ok=true, i, j;
@@ -710,8 +787,9 @@ function calFinish(){
     return;
   }
   CAL={off:off, sc:sc, when:new Date().toLocaleString("it-IT")};
-  ZEROS={};  /* la catena e' cambiata: gli zeri di appoggio vecchi non valgono piu' */
-  calShow(); save(); sigOk();
+  ZEROS={};
+  calShow(); save();
+  sigOk(); setTimeout(function(){ beep(1500,120); },260); setTimeout(function(){ beep(1900,200); },420);
   banner("ok","<b>Sensore calibrato.</b> Zero degli assi "+fmt(off[0],3)+" / "+fmt(off[1],3)+" / "+fmt(off[2],3)+
     ", scala "+fmt(sc[0],3)+" / "+fmt(sc[1],3)+" / "+fmt(sc[2],3)+
     ".<br><b>Gli zeri di appoggio sono stati azzerati</b>: erano misurati sulla catena vecchia. Rifai lo zero quando sei sul posto.");
@@ -766,7 +844,9 @@ function startGps(){
   navigator.geolocation.watchPosition(function(pos){
     gps=pos; gpsWasOk=true;
     var c=pos.coords, acc=c.accuracy;
-    $("vGps").textContent="±"+Math.round(acc)+" m";
+    /* sopra i 35 m il fix non entra in traccia: lo dico, invece di mostrare
+       un numero grosso e lasciar credere che stia registrando spazzatura */
+    $("vGps").textContent="±"+Math.round(acc)+" m"+(acc>35?" · scartato":"");
     $("dGps").className="dot "+(acc<=10?"ok":(acc<=25?"warn":"bad"));
     if(c.heading!==null&&!isNaN(c.heading)&&c.speed>0.7) heading=c.heading;
     /* soglia legata alla precisione: fermo con GPS ballerino non deve generare traccia */
@@ -1222,7 +1302,10 @@ function start(){
   $("fGrp").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); newGroup(); } });
 
   $("bCalGo").addEventListener("click",calStart);
-  $("bCalTake").addEventListener("click",calTake);
+  $("bCalTake").addEventListener("click",function(){
+    if(window.__lastRaw) calGrab(window.__lastRaw);
+    else { sigNo(); calSay("bad","Nessuna lettura dal sensore."); }
+  });
   $("bCalSkip").addEventListener("click",function(){
     calIdx++; if(calIdx<6) calDraw(); else calFinish(); });
   $("bCalQuit").addEventListener("click",function(){ calOn=false; $("cal").hidden=true; });
